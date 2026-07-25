@@ -200,8 +200,9 @@ jobs:
       # ──────────────────────────────────────────────────────────
       # Step 6: Patch Non-Root APK using ReVanced CLI v6 + .mpp
       #
-      # Note: For Non-Root, we MUST explicitly change the package name
-      # using options.json or the --options flag in CLI v6.
+      # To prevent "Invalid Package" error, we MUST change the package name.
+      # ReVanced CLI supports directly changing the package name using
+      # the --custom-package-name flag for the Change Package Name patch.
       # ──────────────────────────────────────────────────────────
       - name: Patch Non-Root APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -212,7 +213,7 @@ jobs:
 
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
 
-          # Create options.json to FORCE the package rename and MicroG support
+          # We force package rename by passing an options.json to the GmsCore support patch
           cat > options.json << EOF
           [
             {
@@ -221,22 +222,32 @@ jobs:
                 "Rename package": true,
                 "Package name": "app.rvx.android.youtube"
               }
+            },
+            {
+              "patchName": "MicroG support",
+              "options": {
+                "Rename package": true,
+                "Package name": "app.rvx.android.youtube"
+              }
             }
           ]
           EOF
 
-          # Patch command: Enable GmsCore support and pass options
+          # Ensure the GmsCore patch is enabled, and try injecting the custom package name option.
+          # We also try the newer ReVanced CLI flag --options 
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
-            --enable "GmsCore support" \
             --options options.json \
+            --enable "GmsCore support" \
+            --enable "MicroG support" \
+            --enable "Change package name" \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk || \
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
-            -e "MicroG support" \
+            --options options.json \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk
 
