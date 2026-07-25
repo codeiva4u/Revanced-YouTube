@@ -146,8 +146,7 @@ jobs:
 
       # ──────────────────────────────────────────────────────────
       # Step 5: Download YouTube Stock APK via apkmd
-      #
-      # apkmd JSON config file से काम करता है
+      # universal + nodpi = सबसे compatible variant
       # ──────────────────────────────────────────────────────────
       - name: Download YouTube Stock APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -156,11 +155,11 @@ jobs:
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
           echo "Downloading YouTube $YT_VER from APKMirror via apkmd..."
 
-          # apkmd के लिए JSON config बनाएं
+          # apkmd JSON config - universal arch, nodpi, type apk
           cat > apkmd-config.json << EOF
           {
             "options": {
-              "arch": "arm64-v8a",
+              "arch": "universal",
               "dpi": "nodpi",
               "outDir": "stock"
             },
@@ -169,20 +168,31 @@ jobs:
                 "org": "google-inc",
                 "repo": "youtube",
                 "version": "${YT_VER}",
+                "type": "apk",
                 "outFile": "youtube-stock"
               }
             ]
           }
           EOF
 
+          cat apkmd-config.json
           build_tools/apkmd apkmd-config.json
 
           # Verify download
-          FILE_SIZE=$(stat -c%s stock/youtube-stock.apk 2>/dev/null || echo "0")
+          APK_FILE=$(find stock -name "*.apk" | head -1)
+          if [ -z "$APK_FILE" ]; then
+            echo "ERROR: No APK file found in stock/"
+            ls -lh stock/
+            exit 1
+          fi
+
+          # Rename to standard name if needed
+          [ "$APK_FILE" != "stock/youtube-stock.apk" ] && mv "$APK_FILE" stock/youtube-stock.apk
+
+          FILE_SIZE=$(stat -c%s stock/youtube-stock.apk)
           echo "Downloaded APK size: $FILE_SIZE bytes"
           if [ "$FILE_SIZE" -lt 10000000 ]; then
-            echo "ERROR: APK file too small or download failed!"
-            ls -lh stock/
+            echo "ERROR: APK too small!"
             exit 1
           fi
           echo "YouTube $YT_VER stock APK downloaded successfully!"
