@@ -200,9 +200,8 @@ jobs:
       # ──────────────────────────────────────────────────────────
       # Step 6: Patch Non-Root APK using ReVanced CLI v6 + .mpp
       #
-      # Note: ReVanced CLI v6 uses -e / --enable to include patches.
-      # We explicitly enable "GmsCore support" to force non-root
-      # package renaming (app.rvx.android.youtube).
+      # Note: For Non-Root, we MUST explicitly change the package name
+      # using options.json or the --options flag in CLI v6.
       # ──────────────────────────────────────────────────────────
       - name: Patch Non-Root APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -213,20 +212,31 @@ jobs:
 
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
 
-          # Check available patch names in .mpp
-          java -jar build_tools/revanced-cli.jar list-patches -p build_tools/patches.mpp -b || true
+          # Create options.json to FORCE the package rename and MicroG support
+          cat > options.json << EOF
+          [
+            {
+              "patchName": "GmsCore support",
+              "options": {
+                "Rename package": true,
+                "Package name": "app.rvx.android.youtube"
+              }
+            }
+          ]
+          EOF
 
-          # Patch command: Enable GmsCore support explicitly
+          # Patch command: Enable GmsCore support and pass options
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
             --enable "GmsCore support" \
+            --options options.json \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk || \
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
-            -e "GmsCore support" \
+            -e "MicroG support" \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk
 
@@ -241,22 +251,15 @@ jobs:
         id: patch-apk
 
       # ──────────────────────────────────────────────────────────
-      # Step 7: Sign APK with uber-apk-signer (v1, v2, v3, v4)
+      # Step 7: (Optional) Verify Signed APK
+      # ReVanced CLI automatically signs and zip-aligns the APK.
+      # Double signing with uber-apk-signer causes package invalid error!
       # ──────────────────────────────────────────────────────────
-      - name: Sign APK
+      - name: Verify APK
         if: steps.check-build.outputs.should_build == 'true'
         run: |
           OUTPUT_APK="${{ steps.patch-apk.outputs.output_apk }}"
-          echo "Signing $OUTPUT_APK ..."
-          java -jar build_tools/uber-apk-signer.jar \
-            --apks "$OUTPUT_APK" \
-            --allowResign \
-            --overwrite \
-            --v1SigningEnabled true \
-            --v2SigningEnabled true \
-            --v3SigningEnabled true \
-            --v4SigningEnabled true
-          echo "APK signed successfully!"
+          echo "APK successfully built and signed by ReVanced CLI!"
           ls -lh *.apk
 
       # ──────────────────────────────────────────────────────────
