@@ -200,11 +200,9 @@ jobs:
       # ──────────────────────────────────────────────────────────
       # Step 6: Patch Non-Root APK using ReVanced CLI v6 + .mpp
       #
-      # CLI v6 syntax:
-      #   java -jar revanced-cli.jar patch
-      #     -p patches.mpp     <- .mpp format (includes integrations)
-      #     -o output.apk
-      #     input.apk
+      # GmsCore Support patch is mandatory for Non-Root so it
+      # changes package name to app.rvx.android.youtube and works
+      # alongside stock YouTube app without signature conflict!
       # ──────────────────────────────────────────────────────────
       - name: Patch Non-Root APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -214,6 +212,15 @@ jobs:
           OUTPUT_APK="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
 
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
+          
+          # We enable GmsCore support explicitly to ensure non-root package renaming
+          java -jar build_tools/revanced-cli.jar patch \
+            -p build_tools/patches.mpp \
+            -b \
+            -e "GmsCore support" \
+            -e "gms-core-support" \
+            -o "$OUTPUT_APK" \
+            stock/youtube-stock.apk || \
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
@@ -231,7 +238,7 @@ jobs:
         id: patch-apk
 
       # ──────────────────────────────────────────────────────────
-      # Step 7: Sign APK with uber-apk-signer
+      # Step 7: Sign APK with uber-apk-signer (with zipAlign)
       # ──────────────────────────────────────────────────────────
       - name: Sign APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -241,7 +248,8 @@ jobs:
           java -jar build_tools/uber-apk-signer.jar \
             --apks "$OUTPUT_APK" \
             --allowResign \
-            --overwrite
+            --overwrite \
+            --verbose
           echo "APK signed successfully!"
           ls -lh *.apk
 
