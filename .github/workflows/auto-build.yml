@@ -159,11 +159,11 @@ jobs:
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
           echo "Downloading YouTube $YT_VER from APKMirror via apkmd..."
 
-          # apkmd JSON config - universal arch, nodpi, type apk
+          # apkmd JSON config - arm64-v8a arch (most compatible for modern devices), nodpi, type apk
           cat > apkmd-config.json << EOF
           {
             "options": {
-              "arch": "universal",
+              "arch": "arm64-v8a",
               "dpi": "nodpi",
               "outDir": "stock"
             },
@@ -217,12 +217,13 @@ jobs:
 
           # Patch command using --options for GmsCore support and package rename
           # The package rename is done via "GmsCore support" patch with options
+          # Correct option keys from Anddea patches: gmsCoreVendorGroupId and packageNameYouTube
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
             --enable "GmsCore support" \
-            --options "GmsCore support|Rename package=true" \
-            --options "GmsCore support|Package name=app.rvx.android.youtube" \
+            --options "GmsCore support|gmsCoreVendorGroupId=app.revanced" \
+            --options "GmsCore support|packageNameYouTube=app.rvx.android.youtube" \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk || \
           java -jar build_tools/revanced-cli.jar patch \
@@ -252,16 +253,15 @@ jobs:
           OUTPUT_APK="${{ steps.patch-apk.outputs.output_apk }}"
           echo "Verifying and aligning $OUTPUT_APK ..."
           
-          # Use uber-apk-signer to properly zip-align and apply v1/v2/v3/v4 signatures
-          # which fixes "Package appears to be invalid" on modern Android
+          # Use uber-apk-signer to properly zip-align and apply v1/v2/v3 signatures
+          # v4 signing is disabled as it causes "Package appears to be invalid" on many Android versions
           java -jar build_tools/uber-apk-signer.jar \
             --apks "$OUTPUT_APK" \
             --allowResign \
             --overwrite \
             --v1SigningEnabled true \
             --v2SigningEnabled true \
-            --v3SigningEnabled true \
-            --v4SigningEnabled true
+            --v3SigningEnabled true
           
           echo "APK processing complete!"
           ls -lh *.apk
