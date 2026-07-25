@@ -147,8 +147,7 @@ jobs:
       # ──────────────────────────────────────────────────────────
       # Step 5: Download YouTube Stock APK via apkmd
       #
-      # apkmd Cloudflare bypass करता है - Python scraping की
-      # ज़रूरत नहीं। यह APKMirror से directly APK download करता है।
+      # apkmd JSON config file से काम करता है
       # ──────────────────────────────────────────────────────────
       - name: Download YouTube Stock APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -157,14 +156,26 @@ jobs:
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
           echo "Downloading YouTube $YT_VER from APKMirror via apkmd..."
 
-          # apkmd syntax: apkmd <org> <app> <version> --arch <arch> --dpi <dpi>
-          build_tools/apkmd google-inc youtube "$YT_VER" \
-            --arch "arm64-v8a" \
-            --dpi "nodpi" \
-            --outdir stock
+          # apkmd के लिए JSON config बनाएं
+          cat > apkmd-config.json << EOF
+          {
+            "options": {
+              "arch": "arm64-v8a",
+              "dpi": "nodpi",
+              "outDir": "stock"
+            },
+            "apps": [
+              {
+                "org": "google-inc",
+                "repo": "youtube",
+                "version": "${YT_VER}",
+                "outFile": "youtube-stock"
+              }
+            ]
+          }
+          EOF
 
-          # Rename to standard name
-          mv stock/*.apk stock/youtube-stock.apk 2>/dev/null || true
+          build_tools/apkmd apkmd-config.json
 
           # Verify download
           FILE_SIZE=$(stat -c%s stock/youtube-stock.apk 2>/dev/null || echo "0")
