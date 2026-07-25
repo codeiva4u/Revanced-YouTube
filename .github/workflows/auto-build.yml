@@ -42,12 +42,13 @@ jobs:
           INCLUDE_PRE="${{ inputs.include_prerelease }}"
           if [ -z "$INCLUDE_PRE" ]; then INCLUDE_PRE="true"; fi
 
-          # Use ReVanced CLI v4.6.0 which is STABLE and correctly renames packages
-          CLI_TAG="v4.6.0"
-          CLI_URL="https://github.com/ReVanced/revanced-cli/releases/download/v4.6.0/revanced-cli-4.6.0-all.jar"
+          # ReVanced CLI latest stable (v6.x)
+          CLI_RELEASE=$(curl -s https://api.github.com/repos/ReVanced/revanced-cli/releases/latest)
+          CLI_TAG=$(echo "$CLI_RELEASE" | jq -r '.tag_name')
+          CLI_URL=$(echo "$CLI_RELEASE" | jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url')
           echo "cli_tag=$CLI_TAG" >> $GITHUB_OUTPUT
           echo "cli_url=$CLI_URL" >> $GITHUB_OUTPUT
-          echo "ReVanced CLI: $CLI_TAG (STABLE)"
+          echo "ReVanced CLI: $CLI_TAG"
 
           # Anddea Patches - all releases (includes pre-release)
           ALL_RELEASES=$(curl -s https://api.github.com/repos/anddea/revanced-patches/releases)
@@ -59,10 +60,7 @@ jobs:
 
           ANDDEA_TAG=$(echo "$ANDDEA_RELEASE" | jq -r '.tag_name')
           ANDDEA_PRE=$(echo "$ANDDEA_RELEASE" | jq -r '.prerelease')
-          
-          # For CLI v4, we need .jar and integrations .apk, not .mpp
-          ANDDEA_JAR=$(echo "$ANDDEA_RELEASE" | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url')
-          ANDDEA_APK=$(echo "$ANDDEA_RELEASE" | jq -r '.assets[] | select(.name | endswith(".apk") or endswith(".rvp")) | .browser_download_url // ""')
+          ANDDEA_MPP=$(echo "$ANDDEA_RELEASE" | jq -r '.assets[] | select(.name | endswith(".mpp")) | .browser_download_url')
           ANDDEA_BODY=$(echo "$ANDDEA_RELEASE" | jq -r '.body // "No release notes"')
 
           # YouTube version: search all releases for latest "Add support for vX.Y.Z" mention
@@ -74,8 +72,7 @@ jobs:
 
           echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
           echo "anddea_prerelease=$ANDDEA_PRE" >> $GITHUB_OUTPUT
-          echo "anddea_jar_url=$ANDDEA_JAR" >> $GITHUB_OUTPUT
-          echo "anddea_apk_url=$ANDDEA_APK" >> $GITHUB_OUTPUT
+          echo "anddea_mpp_url=$ANDDEA_MPP" >> $GITHUB_OUTPUT
           echo "anddea_body<<EOF" >> $GITHUB_OUTPUT
           echo "$ANDDEA_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -83,6 +80,11 @@ jobs:
 
           echo "Anddea Patches: $ANDDEA_TAG"
           echo "Target YouTube Version: $YT_VERSION"
+
+          # This repo's latest release tag
+          THIS_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name // ""')
+          echo "this_repo_tag=$THIS_TAG" >> $GITHUB_OUTPUT
+          echo "This Repo Tag: $THIS_TAG"
 
           # This repo's latest release tag
           THIS_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name // ""')
@@ -122,7 +124,7 @@ jobs:
           java-version: '17'
 
       # ──────────────────────────────────────────────────────────
-      # Step 4: Download ReVanced CLI v4, Anddea patches & apkmd
+      # Step 4: Download ReVanced CLI v6, Anddea patches & apkmd
       # ──────────────────────────────────────────────────────────
       - name: Download Build Tools
         if: steps.check-build.outputs.should_build == 'true'
@@ -132,17 +134,7 @@ jobs:
           wget -q -O build_tools/revanced-cli.jar "${{ steps.fetch-releases.outputs.cli_url }}"
 
           echo "Downloading Anddea patches ${{ steps.fetch-releases.outputs.anddea_tag }}..."
-          # Download .jar instead of .mpp for v4 CLI
-          if [ -n "${{ steps.fetch-releases.outputs.anddea_jar_url }}" ]; then
-            wget -q -O build_tools/patches.jar "${{ steps.fetch-releases.outputs.anddea_jar_url }}"
-          else
-            echo "ERROR: Could not find .jar patches for this release. Anddea may have dropped v4 support."
-            exit 1
-          fi
-
-          if [ -n "${{ steps.fetch-releases.outputs.anddea_apk_url }}" ]; then
-            wget -q -O build_tools/integrations.apk "${{ steps.fetch-releases.outputs.anddea_apk_url }}"
-          fi
+          wget -q -O build_tools/patches.mpp "${{ steps.fetch-releases.outputs.anddea_mpp_url }}"
 
           echo "Downloading uber-apk-signer..."
           wget -q -O build_tools/uber-apk-signer.jar \
@@ -210,8 +202,9 @@ jobs:
           echo "YouTube $YT_VER stock APK downloaded successfully!"
 
       # ──────────────────────────────────────────────────────────
-      # Step 6: Patch Non-Root APK using ReVanced CLI v4
-      # CLI v4 is heavily battle-tested for Non-Root renaming.
+      # Step 6: Patch Non-Root APK using ReVanced CLI v6 + .mpp
+      #
+      # We force package rename by passing CLI flags (-O)
       # ──────────────────────────────────────────────────────────
       - name: Patch Non-Root APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -222,18 +215,26 @@ jobs:
 
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
 
-          # Check available patch names in .jar
-          java -jar build_tools/revanced-cli.jar -a stock/youtube-stock.apk -c -o dummy.apk -b build_tools/patches.jar -m build_tools/integrations.apk --list-patches || true
-
-          # CLI v4 Patch command
-          java -jar build_tools/revanced-cli.jar \
-            -a stock/youtube-stock.apk \
-            -c \
+          # Patch command using explicit -O options for GmsCore support and MicroG support
+          java -jar build_tools/revanced-cli.jar patch \
+            -p build_tools/patches.mpp \
+            -b \
+            --enable "GmsCore support" \
+            --enable "MicroG support" \
+            --enable "Change package name" \
+            -O "GmsCore support"="Rename package=true" \
+            -O "GmsCore support"="Package name=app.rvx.android.youtube" \
+            -O "MicroG support"="Rename package=true" \
+            -O "MicroG support"="Package name=app.rvx.android.youtube" \
+            -O "Change package name"="Package name=app.rvx.android.youtube" \
             -o "$OUTPUT_APK" \
-            -b build_tools/patches.jar \
-            -m build_tools/integrations.apk \
-            -i "GmsCore support" \
-            -i "MicroG support"
+            stock/youtube-stock.apk || \
+          java -jar build_tools/revanced-cli.jar patch \
+            -p build_tools/patches.mpp \
+            -b \
+            --enable "GmsCore support" \
+            -o "$OUTPUT_APK" \
+            stock/youtube-stock.apk
 
           # Verify output
           if [ ! -f "$OUTPUT_APK" ]; then
