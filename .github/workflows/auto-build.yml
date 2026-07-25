@@ -200,9 +200,8 @@ jobs:
       # ──────────────────────────────────────────────────────────
       # Step 6: Patch Non-Root APK using ReVanced CLI v6 + .mpp
       #
-      # GmsCore Support patch is mandatory for Non-Root so it
-      # changes package name to app.rvx.android.youtube and works
-      # alongside stock YouTube app without signature conflict!
+      # Note: ReVanced CLI v6 requires explicit patch enablement
+      # for GmsCore support so the package renames properly.
       # ──────────────────────────────────────────────────────────
       - name: Patch Non-Root APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -212,18 +211,15 @@ jobs:
           OUTPUT_APK="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
 
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
-          
-          # We enable GmsCore support explicitly to ensure non-root package renaming
+
+          # Check available patch names in .mpp
+          java -jar build_tools/revanced-cli.jar list-patches -p build_tools/patches.mpp -b || true
+
+          # ReVanced CLI v6 patch command with explicit GmsCore support
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
             -e "GmsCore support" \
-            -e "gms-core-support" \
-            -o "$OUTPUT_APK" \
-            stock/youtube-stock.apk || \
-          java -jar build_tools/revanced-cli.jar patch \
-            -p build_tools/patches.mpp \
-            -b \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk
 
@@ -238,7 +234,7 @@ jobs:
         id: patch-apk
 
       # ──────────────────────────────────────────────────────────
-      # Step 7: Sign APK with uber-apk-signer (with zipAlign)
+      # Step 7: Sign APK with uber-apk-signer (v1, v2, v3, v4)
       # ──────────────────────────────────────────────────────────
       - name: Sign APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -249,7 +245,10 @@ jobs:
             --apks "$OUTPUT_APK" \
             --allowResign \
             --overwrite \
-            --verbose
+            --v1SigningEnabled true \
+            --v2SigningEnabled true \
+            --v3SigningEnabled true \
+            --v4SigningEnabled true
           echo "APK signed successfully!"
           ls -lh *.apk
 
