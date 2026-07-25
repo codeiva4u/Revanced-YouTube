@@ -215,18 +215,14 @@ jobs:
 
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
 
-          # Patch command using explicit -O options for GmsCore support and MicroG support
+          # Patch command using --options for GmsCore support and package rename
+          # The package rename is done via "GmsCore support" patch with options
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
             --enable "GmsCore support" \
-            --enable "MicroG support" \
-            --enable "Change package name" \
-            -O "GmsCore support"="Rename package=true" \
-            -O "GmsCore support"="Package name=app.rvx.android.youtube" \
-            -O "MicroG support"="Rename package=true" \
-            -O "MicroG support"="Package name=app.rvx.android.youtube" \
-            -O "Change package name"="Package name=app.rvx.android.youtube" \
+            --options "GmsCore support|Rename package=true" \
+            --options "GmsCore support|Package name=app.rvx.android.youtube" \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk || \
           java -jar build_tools/revanced-cli.jar patch \
