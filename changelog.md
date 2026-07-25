@@ -1,21 +1,15 @@
-## v20.51.39-R4 (2026-07-25)
+## YouTube ReVanced 20.51.39 (v4.2.0-dev.8) (2026-07-25)
 
-### Update
-- Patched with Revancify Xisr Tool v1.4.5
-- Based on [Anddea Patch v4.2.0-dev.8](https://github.com/anddea/revanced-patches/releases/tag/v4.2.0-dev.8) (thanks to Anddea)
-- All patch included!
+# [4.2.0-dev.8](https://github.com/anddea/revanced-patches/compare/v4.2.0-dev.7...v4.2.0-dev.8) (2026-07-24)
+
 
 ### Bug Fixes
-- YouTube & YouTube Music - Return YouTube Username: Did not work for some versions (b60e5c8)
+
+* **YouTube & YouTube Music - Return YouTube Username:** Did not work for some versions ([b60e5c8](https://github.com/anddea/revanced-patches/commit/b60e5c86ae3a9972b685d72aac85ce1d3ca629bb))
+
 
 ### Features
-- YouTube & YouTube Music - Spoof video streams: Default client maintenance (7aa53cb)
-- YouTube & YouTube Music: Add Settings menu filter patch, replace old settings (7075602)
 
-### Fix & Problem
-- If YouTube is having problems (module not working) try to use the action button in magisk (root user).
-- There have been many reports from some clients about buffering issues and video not playing (only sound). You can try the previous version or try downloading a different [GMS Core](https://github.com/Zy0x/YouTube-Revanced#-download-gmscoremicrog) . Every user's situation is different!
-- FIX Problem for Buffering Issue: Change spoof client — Go to Settings > ReVanced > Misc > Spoof client, and try switching to a different client (e.g., Android VR, iOS, or Android TV). Some clients handle seeking/forwarding better than others.
-
-`Note: Always Read README.MD first!` 
+* **YouTube & YouTube Music - Spoof video streams:** Default client maintenance ([7aa53cb](https://github.com/anddea/revanced-patches/commit/7aa53cbbdd5139a63647d2e50979b00cfb8bf4e9))
+* **YouTube & YouTube Music:** Add  patch, replace old settings ([7075602](https://github.com/anddea/revanced-patches/commit/70756028d32467a36cbea0bc82a73aff8755e8df))
 
