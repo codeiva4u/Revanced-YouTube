@@ -159,11 +159,12 @@ jobs:
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
           echo "Downloading YouTube $YT_VER from APKMirror via apkmd..."
 
-          # apkmd JSON config - arm64-v8a arch (most compatible for modern devices), nodpi, type apk
+          # apkmd JSON config - universal arch, nodpi, type apk
+          # universal APK is the most compatible variant available on APKMirror
           cat > apkmd-config.json << EOF
           {
             "options": {
-              "arch": "arm64-v8a",
+              "arch": "universal",
               "dpi": "nodpi",
               "outDir": "stock"
             },
