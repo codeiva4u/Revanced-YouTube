@@ -64,11 +64,11 @@ jobs:
           ANDDEA_MPP=$(echo "$ANDDEA_RELEASE" | jq -r '.assets[] | select(.name | endswith(".mpp")) | .browser_download_url')
           ANDDEA_BODY=$(echo "$ANDDEA_RELEASE" | jq -r '.body // "No release notes"')
 
-          # Extract YouTube version supported by this patch from release notes
-          # Anddea mentions supported YouTube version in release body
-          YT_VERSION=$(echo "$ANDDEA_BODY" | grep -oP 'v\d+\.\d+\.\d+' | head -1 | sed 's/v//')
+          # YouTube version: search all releases for latest "Add support for vX.Y.Z" mention
+          # dev releases often don't mention it, so scan all releases
+          ALL_BODIES=$(curl -s https://api.github.com/repos/anddea/revanced-patches/releases | jq -r '.[].body')
+          YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '(?<=Add support for `v)\d+\.\d+\.\d+' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
           if [ -z "$YT_VERSION" ]; then
-            # Fallback: use currently known supported version
             YT_VERSION="20.51.39"
           fi
 
