@@ -216,6 +216,7 @@ jobs:
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
+            -b \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk
 
