@@ -1,10 +1,16 @@
-## v20.51.39-R3 (2026-07-18)
+## v20.51.39-R4 (2026-07-25)
 
 ### Update
 - Patched with Revancify Xisr Tool v1.4.5
-- Based on [Anddea Patch v4.2.0-dev.7](https://github.com/anddea/revanced-patches/releases/tag/v4.2.0-dev.7) (thanks to Anddea)
+- Based on [Anddea Patch v4.2.0-dev.8](https://github.com/anddea/revanced-patches/releases/tag/v4.2.0-dev.8) (thanks to Anddea)
 - All patch included!
-- Update Readme.md for NonRoot User (recommended using MicroG RE - Morphe)
+
+### Bug Fixes
+- YouTube & YouTube Music - Return YouTube Username: Did not work for some versions (b60e5c8)
+
+### Features
+- YouTube & YouTube Music - Spoof video streams: Default client maintenance (7aa53cb)
+- YouTube & YouTube Music: Add Settings menu filter patch, replace old settings (7075602)
 
 ### Fix & Problem
 - If YouTube is having problems (module not working) try to use the action button in magisk (root user).

@@ -1,0 +1,378 @@
+name: Auto Build & Release YouTube ReVanced (Non-Root)
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC - checks for new patches
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build even if patch version unchanged'
+        required: false
+        type: boolean
+        default: false
+      include_prerelease:
+        description: 'Include pre-release patches (dev builds)'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y jq curl wget unzip python3 python3-pip
+          pip3 install requests beautifulsoup4 lxml
+
+      # ──────────────────────────────────────────────────────────
+      # Step 1: Fetch latest releases from GitHub API
+      # ──────────────────────────────────────────────────────────
+      - name: Fetch Latest Releases
+        id: fetch-releases
+        run: |
+          INCLUDE_PRE="${{ inputs.include_prerelease }}"
+          if [ -z "$INCLUDE_PRE" ]; then INCLUDE_PRE="true"; fi
+
+          # ReVanced CLI latest stable (v6.x)
+          CLI_RELEASE=$(curl -s https://api.github.com/repos/ReVanced/revanced-cli/releases/latest)
+          CLI_TAG=$(echo "$CLI_RELEASE" | jq -r '.tag_name')
+          CLI_URL=$(echo "$CLI_RELEASE" | jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url')
+          echo "cli_tag=$CLI_TAG" >> $GITHUB_OUTPUT
+          echo "cli_url=$CLI_URL" >> $GITHUB_OUTPUT
+          echo "ReVanced CLI: $CLI_TAG"
+
+          # Anddea Patches - all releases (includes pre-release)
+          ALL_RELEASES=$(curl -s https://api.github.com/repos/anddea/revanced-patches/releases)
+          if [ "$INCLUDE_PRE" = "true" ]; then
+            ANDDEA_RELEASE=$(echo "$ALL_RELEASES" | jq '.[0]')
+          else
+            ANDDEA_RELEASE=$(curl -s https://api.github.com/repos/anddea/revanced-patches/releases/latest)
+          fi
+
+          ANDDEA_TAG=$(echo "$ANDDEA_RELEASE" | jq -r '.tag_name')
+          ANDDEA_PRE=$(echo "$ANDDEA_RELEASE" | jq -r '.prerelease')
+          ANDDEA_MPP=$(echo "$ANDDEA_RELEASE" | jq -r '.assets[] | select(.name | endswith(".mpp")) | .browser_download_url')
+          ANDDEA_BODY=$(echo "$ANDDEA_RELEASE" | jq -r '.body // "No release notes"')
+
+          # Extract YouTube version supported by this patch from release notes
+          # Anddea mentions supported YouTube version in release body
+          YT_VERSION=$(echo "$ANDDEA_BODY" | grep -oP 'v\d+\.\d+\.\d+' | head -1 | sed 's/v//')
+          if [ -z "$YT_VERSION" ]; then
+            # Fallback: use currently known supported version
+            YT_VERSION="20.51.39"
+          fi
+
+          echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
+          echo "anddea_prerelease=$ANDDEA_PRE" >> $GITHUB_OUTPUT
+          echo "anddea_mpp_url=$ANDDEA_MPP" >> $GITHUB_OUTPUT
+          echo "anddea_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$ANDDEA_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "yt_version=$YT_VERSION" >> $GITHUB_OUTPUT
+
+          echo "Anddea Patches: $ANDDEA_TAG (pre-release: $ANDDEA_PRE)"
+          echo "Target YouTube Version: $YT_VERSION"
+
+          # This repo's latest release tag
+          THIS_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name // ""')
+          echo "this_repo_tag=$THIS_TAG" >> $GITHUB_OUTPUT
+          echo "This Repo Tag: $THIS_TAG"
+
+      # ──────────────────────────────────────────────────────────
+      # Step 2: Decide whether a new build is needed
+      # ──────────────────────────────────────────────────────────
+      - name: Check if Build Required
+        id: check-build
+        run: |
+          FORCE="${{ inputs.force_build }}"
+          if [ -z "$FORCE" ]; then FORCE="false"; fi
+          LATEST="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          CURRENT="${{ steps.fetch-releases.outputs.this_repo_tag }}"
+
+          echo "Latest patch : $LATEST"
+          echo "Current build: $CURRENT"
+
+          if [ "$FORCE" = "true" ] || [ "$LATEST" != "$CURRENT" ]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "New patch detected or force-build requested. Proceeding."
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "Already up-to-date. Skipping build."
+          fi
+
+      # ──────────────────────────────────────────────────────────
+      # Step 3: Setup Java 17 (required by ReVanced CLI v6)
+      # ──────────────────────────────────────────────────────────
+      - name: Setup Java 17
+        if: steps.check-build.outputs.should_build == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # ──────────────────────────────────────────────────────────
+      # Step 4: Download ReVanced CLI and Anddea patches
+      # ──────────────────────────────────────────────────────────
+      - name: Download Build Tools
+        if: steps.check-build.outputs.should_build == 'true'
+        run: |
+          mkdir -p build_tools
+          echo "Downloading ReVanced CLI ${{ steps.fetch-releases.outputs.cli_tag }}..."
+          wget -q -O build_tools/revanced-cli.jar "${{ steps.fetch-releases.outputs.cli_url }}"
+
+          echo "Downloading Anddea patches ${{ steps.fetch-releases.outputs.anddea_tag }}..."
+          wget -q -O build_tools/patches.mpp "${{ steps.fetch-releases.outputs.anddea_mpp_url }}"
+
+          echo "Downloading uber-apk-signer..."
+          wget -q -O build_tools/uber-apk-signer.jar \
+            https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar
+
+          echo "Tools ready:"
+          ls -lh build_tools/
+
+      # ──────────────────────────────────────────────────────────
+      # Step 5: Scrape APKMirror to get latest YouTube APK URL
+      #
+      # URL Pattern discovered:
+      #   /apk/google-inc/youtube/youtube-{VER}-release/
+      #   variant: youtube-{VER}-3-android-apk-download/  <- universal nodpi Android 9+
+      #   download: ?key={KEY}&forcebaseapk=true
+      # ──────────────────────────────────────────────────────────
+      - name: Fetch YouTube APK from APKMirror
+        if: steps.check-build.outputs.should_build == 'true'
+        id: fetch-apk
+        run: |
+          YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
+          echo "Fetching YouTube $YT_VER from APKMirror..."
+
+          # Convert version dots to dashes for URL slug
+          YT_SLUG=$(echo "$YT_VER" | tr '.' '-')
+
+          # Python script to scrape APKMirror download key
+          python3 << 'PYEOF'
+          import requests, re, sys, os
+          from bs4 import BeautifulSoup
+
+          yt_ver = os.environ.get("YT_VERSION", "")
+          yt_slug = yt_ver.replace(".", "-")
+
+          headers = {
+              "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+              "Accept-Language": "en-US,en;q=0.9",
+          }
+
+          # Step A: Find the nodpi universal variant download page
+          release_url = f"https://www.apkmirror.com/apk/google-inc/youtube/youtube-{yt_slug}-release/"
+          print(f"Fetching release page: {release_url}")
+          r = requests.get(release_url, headers=headers, timeout=30)
+
+          soup = BeautifulSoup(r.text, "lxml")
+
+          # Find the nodpi universal variant link (pattern: youtube-{ver}-3-android-apk-download)
+          variant_link = None
+          for a in soup.find_all("a", href=True):
+              href = a["href"]
+              if f"youtube-{yt_slug}-" in href and "android-apk-download" in href:
+                  # Prefer: nodpi universal variant
+                  variant_link = href
+                  if "-3-android-apk-download" in href:
+                      break  # exact nodpi universal match
+
+          if not variant_link:
+              print("ERROR: Could not find variant download page link")
+              sys.exit(1)
+
+          # Ensure full URL
+          if not variant_link.startswith("http"):
+              variant_link = "https://www.apkmirror.com" + variant_link
+
+          print(f"Variant page: {variant_link}")
+
+          # Step B: Get the download key from the variant page
+          r2 = requests.get(variant_link, headers=headers, timeout=30)
+          soup2 = BeautifulSoup(r2.text, "lxml")
+
+          # Find the download link with ?key=
+          download_link = None
+          for a in soup2.find_all("a", href=True):
+              href = a["href"]
+              if "download/?key=" in href and "forcebaseapk=true" in href:
+                  download_link = href
+                  break
+
+          if not download_link:
+              print("ERROR: Could not find download key link")
+              sys.exit(1)
+
+          if not download_link.startswith("http"):
+              download_link = "https://www.apkmirror.com" + download_link
+
+          print(f"Download URL: {download_link}")
+
+          # Write to GitHub output
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"apk_download_url={download_link}\n")
+              f.write(f"apk_variant_page={variant_link}\n")
+
+          print("SUCCESS: APK download URL found!")
+          PYEOF
+        env:
+          YT_VERSION: ${{ steps.fetch-releases.outputs.yt_version }}
+
+      # ──────────────────────────────────────────────────────────
+      # Step 6: Download YouTube Stock APK
+      # ──────────────────────────────────────────────────────────
+      - name: Download YouTube Stock APK
+        if: steps.check-build.outputs.should_build == 'true'
+        run: |
+          mkdir -p stock
+          YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
+          APK_URL="${{ steps.fetch-apk.outputs.apk_download_url }}"
+
+          echo "Downloading YouTube $YT_VER stock APK..."
+          wget -q \
+            --user-agent="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36" \
+            --referer="${{ steps.fetch-apk.outputs.apk_variant_page }}" \
+            -O stock/youtube-stock.apk \
+            "$APK_URL"
+
+          # Verify download
+          FILE_SIZE=$(stat -c%s stock/youtube-stock.apk 2>/dev/null || echo "0")
+          echo "Downloaded APK size: $FILE_SIZE bytes"
+          if [ "$FILE_SIZE" -lt 10000000 ]; then
+            echo "ERROR: APK file too small, download may have failed!"
+            file stock/youtube-stock.apk
+            head -c 500 stock/youtube-stock.apk | strings
+            exit 1
+          fi
+          echo "YouTube $YT_VER stock APK downloaded successfully!"
+
+      # ──────────────────────────────────────────────────────────
+      # Step 7: Patch Non-Root APK using ReVanced CLI v6 + .mpp
+      #
+      # CLI v6 syntax:
+      #   java -jar revanced-cli.jar patch
+      #     -p patches.mpp     <- .mpp format (includes integrations)
+      #     -o output.apk
+      #     input.apk
+      # ──────────────────────────────────────────────────────────
+      - name: Patch Non-Root APK
+        if: steps.check-build.outputs.should_build == 'true'
+        run: |
+          YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
+          ANDDEA_TAG="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          OUTPUT_APK="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
+
+          echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
+          java -jar build_tools/revanced-cli.jar patch \
+            -p build_tools/patches.mpp \
+            -o "$OUTPUT_APK" \
+            stock/youtube-stock.apk
+
+          # Verify output
+          if [ ! -f "$OUTPUT_APK" ]; then
+            echo "ERROR: Patched APK not created!"
+            exit 1
+          fi
+          PATCHED_SIZE=$(stat -c%s "$OUTPUT_APK")
+          echo "Patched APK size: $PATCHED_SIZE bytes"
+          echo "output_apk=$OUTPUT_APK" >> $GITHUB_OUTPUT
+        id: patch-apk
+
+      # ──────────────────────────────────────────────────────────
+      # Step 8: Sign APK with uber-apk-signer
+      # ──────────────────────────────────────────────────────────
+      - name: Sign APK
+        if: steps.check-build.outputs.should_build == 'true'
+        run: |
+          OUTPUT_APK="${{ steps.patch-apk.outputs.output_apk }}"
+          echo "Signing $OUTPUT_APK ..."
+          java -jar build_tools/uber-apk-signer.jar \
+            --apks "$OUTPUT_APK" \
+            --allowResign \
+            --overwrite
+          echo "APK signed successfully!"
+          ls -lh *.apk
+
+      # ──────────────────────────────────────────────────────────
+      # Step 9: Create GitHub Release with patched APK
+      # ──────────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        if: steps.check-build.outputs.should_build == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.fetch-releases.outputs.anddea_tag }}
+          name: "YouTube ReVanced ${{ steps.fetch-releases.outputs.yt_version }} (${{ steps.fetch-releases.outputs.anddea_tag }})"
+          prerelease: ${{ steps.fetch-releases.outputs.anddea_prerelease }}
+          body: |
+            ## Auto Build - YouTube ReVanced Non-Root
+
+            | Component | Version |
+            |-----------|---------|
+            | **YouTube (Stock)** | `${{ steps.fetch-releases.outputs.yt_version }}` |
+            | **ReVanced CLI** | `${{ steps.fetch-releases.outputs.cli_tag }}` |
+            | **Anddea Patches** | `${{ steps.fetch-releases.outputs.anddea_tag }}` |
+            | **Stock APK Source** | [APKMirror](https://www.apkmirror.com/apk/google-inc/youtube/youtube-${{ steps.fetch-releases.outputs.yt_version }}-release/) |
+
+            ### Installation
+            - **Non-Root:** Install [GmsCore/MicroG](https://github.com/Zy0x/YouTube-Revanced#-download-gmscoremicrog) first, then install this APK
+            - All patches included
+
+            ### Patch Notes
+            ${{ steps.fetch-releases.outputs.anddea_body }}
+          files: |
+            YouTube-ReVanced-NonRoot-*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      # ──────────────────────────────────────────────────────────
+      # Step 10: Update update.json and changelog.md
+      # ──────────────────────────────────────────────────────────
+      - name: Update update.json & changelog.md
+        if: steps.check-build.outputs.should_build == 'true'
+        run: |
+          ANDDEA_TAG="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
+          ANDDEA_PRE="${{ steps.fetch-releases.outputs.anddea_prerelease }}"
+          TODAY=$(date +"%Y-%m-%d")
+          VERSION_CODE=$(date +"%Y%m%d")
+
+          # Determine release type
+          if [ "$ANDDEA_PRE" = "true" ]; then
+            RELEASE_TYPE="beta"
+          else
+            RELEASE_TYPE="stable"
+          fi
+
+          # Get ZIP URL from latest release assets
+          ZIP_URL=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest \
+            | jq -r '.assets[] | select(.name | endswith(".apk")) | .browser_download_url' | head -1)
+
+          # Update update.json
+          jq \
+            --arg version "v$YT_VER" \
+            --argjson versionCode "$VERSION_CODE" \
+            --arg zipUrl "$ZIP_URL" \
+            --arg releaseType "$RELEASE_TYPE" \
+            '.version = $version | .versionCode = $versionCode | .zipUrl = $zipUrl | .releaseType = $releaseType' \
+            update.json > update.json.tmp && mv update.json.tmp update.json
+
+          # Update changelog.md
+          rm -f changelog.md
+          echo -e "## YouTube ReVanced $YT_VER ($ANDDEA_TAG) ($TODAY)\n\n${{ steps.fetch-releases.outputs.anddea_body }}\n" > changelog.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add update.json changelog.md
+          git commit -m "Auto-update: YouTube $YT_VER with Anddea $ANDDEA_TAG" || echo "No changes to commit"
+          git push
