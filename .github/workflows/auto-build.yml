@@ -200,8 +200,9 @@ jobs:
       # ──────────────────────────────────────────────────────────
       # Step 6: Patch Non-Root APK using ReVanced CLI v6 + .mpp
       #
-      # Note: ReVanced CLI v6 requires explicit patch enablement
-      # for GmsCore support so the package renames properly.
+      # Note: ReVanced CLI v6 uses -e / --enable to include patches.
+      # We explicitly enable "GmsCore support" to force non-root
+      # package renaming (app.rvx.android.youtube).
       # ──────────────────────────────────────────────────────────
       - name: Patch Non-Root APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -215,7 +216,13 @@ jobs:
           # Check available patch names in .mpp
           java -jar build_tools/revanced-cli.jar list-patches -p build_tools/patches.mpp -b || true
 
-          # ReVanced CLI v6 patch command with explicit GmsCore support
+          # Patch command: Enable GmsCore support explicitly
+          java -jar build_tools/revanced-cli.jar patch \
+            -p build_tools/patches.mpp \
+            -b \
+            --enable "GmsCore support" \
+            -o "$OUTPUT_APK" \
+            stock/youtube-stock.apk || \
           java -jar build_tools/revanced-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
