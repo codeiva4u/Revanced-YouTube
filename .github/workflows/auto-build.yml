@@ -466,3 +466,15 @@ jobs:
           git add update.json changelog.md
           git commit -m "Auto-update: YouTube $YT_VER with Anddea $ANDDEA_TAG" || echo "No changes to commit"
           git push
+
+      # ──────────────────────────────────────────────────────────
+      # Step 10: Auto-Clean Old Workflow Runs
+      # Automatically clean up old and obsolete GitHub Action runs
+      # ──────────────────────────────────────────────────────────
+      - name: Delete Old Workflow Runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 3
+          keep_minimum_runs: 5
