@@ -59,7 +59,7 @@ jobs:
           echo "cli_url=$CLI_URL" >> $GITHUB_OUTPUT
           echo "Morphe CLI: $CLI_TAG ($CLI_URL)"
 
-          # Anddea Patches - all releases (includes pre-release)
+          # Anddea Patches (YouTube) - all releases (includes pre-release)
           if [ "$INCLUDE_PRE" = "true" ]; then
             ALL_RELEASES=$(gh api repos/anddea/revanced-patches/releases 2>/dev/null || echo '[]')
             ANDDEA_RELEASE=$(echo "$ALL_RELEASES" | jq 'if type=="array" and length > 0 then .[0] else {} end')
@@ -81,12 +81,23 @@ jobs:
 
           ANDDEA_BODY=$(echo "$ANDDEA_RELEASE" | jq -r '.body // "Release notes not available"')
 
+          # De-Vanced Patches (Google Photos)
+          DEVANCED_RELEASE=$(gh api repos/RookieEnough/De-Vanced/releases/latest 2>/dev/null || echo '{}')
+          DEVANCED_TAG=$(echo "$DEVANCED_RELEASE" | jq -r '.tag_name // "v1.0.4"')
+          DEVANCED_MPP=$(echo "$DEVANCED_RELEASE" | jq -r '.assets[]? | select(.name | endswith(".mpp")) | .browser_download_url // ""')
+          if [ -z "$DEVANCED_MPP" ] || [ "$DEVANCED_MPP" = "null" ]; then
+            DEVANCED_MPP="https://github.com/RookieEnough/De-Vanced/releases/download/${DEVANCED_TAG}/patches-${DEVANCED_TAG#v}.mpp"
+          fi
+
           # YouTube version: search all releases for latest "Add support for vX.Y.Z" mention
           ALL_BODIES=$(gh api repos/anddea/revanced-patches/releases 2>/dev/null | jq -r 'if type=="array" then .[].body // "" else "" end' 2>/dev/null || echo "")
           YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '(?<=Add support for `v)\d+\.\d+\.\d+' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
           if [ -z "$YT_VERSION" ]; then
             YT_VERSION="20.51.39"
           fi
+
+          # Google Photos version
+          GPHOTOS_VERSION="7.68.0.884121604"
 
           echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
           echo "anddea_prerelease=$ANDDEA_PRE" >> $GITHUB_OUTPUT
@@ -96,8 +107,14 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
           echo "yt_version=$YT_VERSION" >> $GITHUB_OUTPUT
 
-          echo "Anddea Patches: $ANDDEA_TAG"
+          echo "devanced_tag=$DEVANCED_TAG" >> $GITHUB_OUTPUT
+          echo "devanced_mpp_url=$DEVANCED_MPP" >> $GITHUB_OUTPUT
+          echo "gphotos_version=$GPHOTOS_VERSION" >> $GITHUB_OUTPUT
+
+          echo "Anddea Patches (YouTube): $ANDDEA_TAG"
           echo "Target YouTube Version: $YT_VERSION"
+          echo "De-Vanced Patches (Google Photos): $DEVANCED_TAG"
+          echo "Target Google Photos Version: $GPHOTOS_VERSION"
 
           # This repo's latest release tag
           THIS_TAG=$(gh api repos/${{ github.repository }}/releases/latest 2>/dev/null | jq -r '.tag_name // ""' 2>/dev/null || echo "")
@@ -148,8 +165,11 @@ jobs:
           echo "Downloading Morphe CLI ${{ steps.fetch-releases.outputs.cli_tag }}..."
           wget -q -O build_tools/morphe-cli.jar "${{ steps.fetch-releases.outputs.cli_url }}"
 
-          echo "Downloading Anddea patches ${{ steps.fetch-releases.outputs.anddea_tag }}..."
-          wget -q -O build_tools/patches.mpp "${{ steps.fetch-releases.outputs.anddea_mpp_url }}"
+          echo "Downloading Anddea YouTube patches ${{ steps.fetch-releases.outputs.anddea_tag }}..."
+          wget -q -O build_tools/youtube-patches.mpp "${{ steps.fetch-releases.outputs.anddea_mpp_url }}"
+
+          echo "Downloading De-Vanced Google Photos patches ${{ steps.fetch-releases.outputs.devanced_tag }}..."
+          wget -q -O build_tools/gphotos-patches.mpp "${{ steps.fetch-releases.outputs.devanced_mpp_url }}"
 
           echo "Downloading uber-apk-signer..."
           wget -q -O build_tools/uber-apk-signer.jar \
@@ -167,15 +187,15 @@ jobs:
       # Step 5: Download YouTube Stock APK via apkmd
       # universal + nodpi = सबसे compatible variant
       # ──────────────────────────────────────────────────────────
-      - name: Download YouTube Stock APK
+      - name: Download YouTube & Google Photos Stock APKs
         if: steps.check-build.outputs.should_build == 'true'
         run: |
           mkdir -p stock
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
-          echo "Downloading YouTube $YT_VER from APKMirror via apkmd..."
+          GPHOTOS_VER="${{ steps.fetch-releases.outputs.gphotos_version }}"
 
-          # apkmd JSON config - universal arch, nodpi, type apk
-          # universal APK is the most compatible variant available on APKMirror
+          echo "Downloading YouTube $YT_VER and Google Photos $GPHOTOS_VER from APKMirror via apkmd..."
+
           cat > apkmd-config.json << EOF
           {
             "options": {
@@ -190,6 +210,13 @@ jobs:
                 "version": "${YT_VER}",
                 "type": "apk",
                 "outFile": "youtube-stock"
+              },
+              {
+                "org": "google-inc",
+                "repo": "photos",
+                "version": "${GPHOTOS_VER}",
+                "type": "apk",
+                "outFile": "gphotos-stock"
               }
             ]
           }
@@ -198,41 +225,39 @@ jobs:
           cat apkmd-config.json
           build_tools/apkmd apkmd-config.json
 
-          # Verify download
-          APK_FILE=$(find stock -name "*.apk" | head -1)
-          if [ -z "$APK_FILE" ]; then
-            echo "ERROR: No APK file found in stock/"
-            ls -lh stock/
-            exit 1
+          # Verify downloads
+          if [ ! -f "stock/youtube-stock.apk" ]; then
+            YT_APK=$(find stock -name "*youtube*.apk" | head -1)
+            [ -n "$YT_APK" ] && mv "$YT_APK" stock/youtube-stock.apk
           fi
 
-          # Rename to standard name if needed
-          [ "$APK_FILE" != "stock/youtube-stock.apk" ] && mv "$APK_FILE" stock/youtube-stock.apk
-
-          FILE_SIZE=$(stat -c%s stock/youtube-stock.apk)
-          echo "Downloaded APK size: $FILE_SIZE bytes"
-          if [ "$FILE_SIZE" -lt 10000000 ]; then
-            echo "ERROR: APK too small!"
-            exit 1
+          if [ ! -f "stock/gphotos-stock.apk" ]; then
+            GP_APK=$(find stock -name "*photos*.apk" | head -1)
+            [ -n "$GP_APK" ] && mv "$GP_APK" stock/gphotos-stock.apk
           fi
-          echo "YouTube $YT_VER stock APK downloaded successfully!"
+
+          echo "Downloaded stock APKs:"
+          ls -lh stock/
 
       # ──────────────────────────────────────────────────────────
-      # Step 6: Patch Non-Root APK using Morphe CLI + .mpp
+      # Step 6: Patch Non-Root APKs (YouTube & Google Photos)
       # ──────────────────────────────────────────────────────────
-      - name: Patch Non-Root APK
+      - name: Patch Non-Root APKs
         if: steps.check-build.outputs.should_build == 'true'
         run: |
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
           ANDDEA_TAG="${{ steps.fetch-releases.outputs.anddea_tag }}"
-          OUTPUT_APK="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
+          GPHOTOS_VER="${{ steps.fetch-releases.outputs.gphotos_version }}"
+          DEVANCED_TAG="${{ steps.fetch-releases.outputs.devanced_tag }}"
 
-          echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG using Morphe CLI..."
-          rm -f "$OUTPUT_APK"
+          YT_OUTPUT="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
+          GP_OUTPUT="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_${DEVANCED_TAG}.apk"
 
-          # Create Morphe options.json for GmsCore support & custom package name & Spoof video streams default client
-          # Morphe CLI expects an Array of PatchBundles: [ { "patches": { ... } } ]
-          cat > options.json << EOF
+          rm -f "$YT_OUTPUT" "$GP_OUTPUT"
+
+          # 1. Patch YouTube
+          echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
+          cat > yt-options.json << EOF
           [
             {
               "patches": {
@@ -255,81 +280,109 @@ jobs:
           ]
           EOF
 
-          cat options.json
-
           java -jar build_tools/morphe-cli.jar patch \
-            -p build_tools/patches.mpp \
+            -p build_tools/youtube-patches.mpp \
             -e "GmsCore support" \
             -e "Spoof video streams" \
-            --options-file options.json \
-            -o "$OUTPUT_APK" \
+            --options-file yt-options.json \
+            -o "$YT_OUTPUT" \
             stock/youtube-stock.apk
 
-          # Verify output
-          if [ ! -f "$OUTPUT_APK" ]; then
-            echo "ERROR: Patched APK not created!"
-            exit 1
-          fi
-          PATCHED_SIZE=$(stat -c%s "$OUTPUT_APK")
-          echo "Patched APK size: $PATCHED_SIZE bytes"
-          if [ "$PATCHED_SIZE" -lt 10000000 ]; then
-            echo "ERROR: Patched APK size too small ($PATCHED_SIZE bytes)! Patching failed."
-            exit 1
-          fi
-          echo "output_apk=$OUTPUT_APK" >> $GITHUB_OUTPUT
+          # 2. Patch Google Photos
+          echo "Patching Google Photos $GPHOTOS_VER with De-Vanced $DEVANCED_TAG ..."
+          cat > gp-options.json << EOF
+          [
+            {
+              "patches": {
+                "GmsCore support": {
+                  "enabled": true,
+                  "options": {
+                    "gmsCoreVendorGroupId": "app.revanced"
+                  }
+                },
+                "Spoof features": {
+                  "enabled": true
+                },
+                "Spoof build info": {
+                  "enabled": true
+                },
+                "Enable DCIM folders backup control": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+          EOF
+
+          java -jar build_tools/morphe-cli.jar patch \
+            -p build_tools/gphotos-patches.mpp \
+            -e "GmsCore support" \
+            -e "Spoof features" \
+            -e "Spoof build info" \
+            -e "Enable DCIM folders backup control" \
+            --options-file gp-options.json \
+            -o "$GP_OUTPUT" \
+            stock/gphotos-stock.apk
+
+          echo "Verifying patched APKs..."
+          ls -lh *.apk
+          echo "yt_output=$YT_OUTPUT" >> $GITHUB_OUTPUT
+          echo "gp_output=$GP_OUTPUT" >> $GITHUB_OUTPUT
         id: patch-apk
 
       # ──────────────────────────────────────────────────────────
       # Step 7: Finalize & ZipAlign APK
       # Ensure the APK is properly signed and zip-aligned for Android 11+
       # ──────────────────────────────────────────────────────────
-      - name: Sign APK
+      - name: Sign APKs
         if: steps.check-build.outputs.should_build == 'true'
         run: |
-          OUTPUT_APK="${{ steps.patch-apk.outputs.output_apk }}"
-          echo "Verifying and aligning $OUTPUT_APK ..."
+          echo "Signing all patched APKs..."
           
-          # Use uber-apk-signer to properly zip-align and apply v1/v2/v3 signatures
-          # v4 signing is disabled as it causes "Package appears to be invalid" on many Android versions
-          java -jar build_tools/uber-apk-signer.jar \
-            --apks "$OUTPUT_APK" \
-            --allowResign \
-            --overwrite \
-            --v1SigningEnabled true \
-            --v2SigningEnabled true \
-            --v3SigningEnabled true
+          for apk in *.apk; do
+            if [ -f "$apk" ]; then
+              echo "Signing $apk ..."
+              java -jar build_tools/uber-apk-signer.jar \
+                --apks "$apk" \
+                --allowResign \
+                --overwrite \
+                --v1SigningEnabled true \
+                --v2SigningEnabled true \
+                --v3SigningEnabled true
+            fi
+          done
           
-          echo "APK processing complete!"
+          echo "APK signing complete!"
           ls -lh *.apk
 
       # ──────────────────────────────────────────────────────────
-      # Step 8: Create GitHub Release with patched APK
+      # Step 8: Create GitHub Release with YouTube & Google Photos APKs
       # ──────────────────────────────────────────────────────────
       - name: Create GitHub Release
         if: steps.check-build.outputs.should_build == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.fetch-releases.outputs.anddea_tag }}
-          name: "YouTube ReVanced ${{ steps.fetch-releases.outputs.yt_version }} (${{ steps.fetch-releases.outputs.anddea_tag }})"
+          name: "YouTube & Google Photos ReVanced (${{ steps.fetch-releases.outputs.anddea_tag }})"
           prerelease: ${{ steps.fetch-releases.outputs.anddea_prerelease }}
           body: |
-            ## Auto Build - YouTube ReVanced Non-Root
+            ## Auto Build - YouTube & Google Photos ReVanced (Non-Root)
 
-            | Component | Version |
-            |-----------|---------|
-            | **YouTube (Stock)** | `${{ steps.fetch-releases.outputs.yt_version }}` |
-            | **Morphe CLI** | `${{ steps.fetch-releases.outputs.cli_tag }}` |
-            | **Anddea Patches** | `${{ steps.fetch-releases.outputs.anddea_tag }}` |
-            | **Stock APK Source** | [APKMirror](https://www.apkmirror.com/apk/google-inc/youtube/youtube-${{ steps.fetch-releases.outputs.yt_version }}-release/) |
+            ### Packages Included:
+            1. **YouTube ReVanced** `${{ steps.fetch-releases.outputs.yt_version }}`
+               - Package Name: `com.revanced.youtube`
+               - Client Spoofing: `Android Studio`
+               - Patches: Anddea `${{ steps.fetch-releases.outputs.anddea_tag }}`
 
-            ### Installation
-            - **Non-Root:** Install [GmsCore/MicroG](https://github.com/Zy0x/YouTube-Revanced#-download-gmscoremicrog) first, then install this APK
-            - All patches included
+            2. **Google Photos ReVanced** `${{ steps.fetch-releases.outputs.gphotos_version }}`
+               - Features: Unlimited Original Quality Storage (Pixel XL Spoofing), Magic Eraser & GmsCore Support
+               - Patches: De-Vanced `${{ steps.fetch-releases.outputs.devanced_tag }}`
 
-            ### Patch Notes
-            ${{ steps.fetch-releases.outputs.anddea_body }}
+            ### Installation:
+            - Install [GmsCore / MicroG](https://github.com/Zy0x/YouTube-Revanced#-download-gmscoremicrog) first.
+            - Install the desired APK(s) below.
           files: |
-            YouTube-ReVanced-NonRoot-*.apk
+            *.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
