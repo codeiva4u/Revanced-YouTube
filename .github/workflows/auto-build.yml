@@ -213,8 +213,7 @@ jobs:
               },
               {
                 "org": "google-inc",
-                "repo": "photos",
-                "version": "${GPHOTOS_VER}",
+                "repo": "google-photos",
                 "type": "apk",
                 "outFile": "gphotos-stock"
               }
@@ -227,13 +226,23 @@ jobs:
 
           # Verify downloads
           if [ ! -f "stock/youtube-stock.apk" ]; then
-            YT_APK=$(find stock -name "*youtube*.apk" | head -1)
-            [ -n "$YT_APK" ] && mv "$YT_APK" stock/youtube-stock.apk
+            YT_APK=$(find stock -name "*youtube*.apk" -o -name "*YouTube*.apk" | head -1)
+            if [ -n "$YT_APK" ]; then
+              mv "$YT_APK" stock/youtube-stock.apk
+            else
+              echo "ERROR: YouTube stock APK missing!"
+              exit 1
+            fi
           fi
 
           if [ ! -f "stock/gphotos-stock.apk" ]; then
-            GP_APK=$(find stock -name "*photos*.apk" | head -1)
-            [ -n "$GP_APK" ] && mv "$GP_APK" stock/gphotos-stock.apk
+            GP_APK=$(find stock -name "*photos*.apk" -o -name "*Photos*.apk" | head -1)
+            if [ -n "$GP_APK" ]; then
+              mv "$GP_APK" stock/gphotos-stock.apk
+            else
+              echo "ERROR: Google Photos stock APK missing!"
+              exit 1
+            fi
           fi
 
           echo "Downloaded stock APKs:"
@@ -269,11 +278,7 @@ jobs:
                   }
                 },
                 "Spoof video streams": {
-                  "enabled": true,
-                  "options": {
-                    "defaultClient": "ANDROID_STUDIO",
-                    "defaultClientType": "ANDROID_STUDIO"
-                  }
+                  "enabled": true
                 }
               }
             }
