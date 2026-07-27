@@ -10,8 +10,15 @@
 > **I only patch for personal use. Please use at your own risk!**  
 ‎
 ## 📌 About  
-This project provides a **YouTube ReVanced** patch that enables an ad-free experience and premium features **without a subscription**.  
+This project provides an automated build for **YouTube ReVanced** (Ad-free, Premium features, Android Studio spoof) and **Google Photos ReVanced** (Unlimited Original Quality Backup, Magic Eraser) **without any subscription**.  
 Supports both **ROOT** and **NON-ROOT** versions! 🚀  
+
+## 📥 Included Packages in Releases
+
+Every release automatically builds and bundles:
+1. **YouTube ReVanced (Non-Root)** - `com.revanced.youtube`
+2. **Google Photos ReVanced (Non-Root)** - Pixel XL Unlimited Storage & Magic Eraser (Universal `arm64-v8a` & `arm-v7a`)
+3. **MicroG-RE (Morphe)** - `MicroG-RE-*.apk` companion for account login & background sync
 ‎
 ## 🔧 Requirements  
 
