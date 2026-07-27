@@ -42,20 +42,24 @@ jobs:
           INCLUDE_PRE="${{ inputs.include_prerelease }}"
           if [ -z "$INCLUDE_PRE" ]; then INCLUDE_PRE="true"; fi
 
-          # Morphe CLI latest stable
-          CLI_RELEASE=$(curl -s https://api.github.com/repos/MorpheApp/morphe-cli/releases/latest)
-          CLI_TAG=$(echo "$CLI_RELEASE" | jq -r '.tag_name')
+          # Morphe Desktop CLI latest stable
+          CLI_RELEASE=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/MorpheApp/morphe-desktop/releases/latest)
+          CLI_TAG=$(echo "$CLI_RELEASE" | jq -r '.tag_name // "v1.12.0"')
           CLI_URL=$(echo "$CLI_RELEASE" | jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url')
+          if [ -z "$CLI_URL" ] || [ "$CLI_URL" = "null" ]; then
+            CLI_URL="https://github.com/MorpheApp/morphe-desktop/releases/download/v1.12.0/morphe-desktop-1.12.0-all.jar"
+            CLI_TAG="v1.12.0"
+          fi
           echo "cli_tag=$CLI_TAG" >> $GITHUB_OUTPUT
           echo "cli_url=$CLI_URL" >> $GITHUB_OUTPUT
-          echo "Morphe CLI: $CLI_TAG"
+          echo "Morphe CLI: $CLI_TAG ($CLI_URL)"
 
           # Anddea Patches - all releases (includes pre-release)
-          ALL_RELEASES=$(curl -s https://api.github.com/repos/anddea/revanced-patches/releases)
+          ALL_RELEASES=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/anddea/revanced-patches/releases)
           if [ "$INCLUDE_PRE" = "true" ]; then
             ANDDEA_RELEASE=$(echo "$ALL_RELEASES" | jq '.[0]')
           else
-            ANDDEA_RELEASE=$(curl -s https://api.github.com/repos/anddea/revanced-patches/releases/latest)
+            ANDDEA_RELEASE=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/anddea/revanced-patches/releases/latest)
           fi
 
           ANDDEA_TAG=$(echo "$ANDDEA_RELEASE" | jq -r '.tag_name')
@@ -64,7 +68,7 @@ jobs:
           ANDDEA_BODY=$(echo "$ANDDEA_RELEASE" | jq -r '.body // "No release notes"')
 
           # YouTube version: search all releases for latest "Add support for vX.Y.Z" mention
-          ALL_BODIES=$(curl -s https://api.github.com/repos/anddea/revanced-patches/releases | jq -r '.[].body')
+          ALL_BODIES=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/anddea/revanced-patches/releases | jq -r '.[].body // ""')
           YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '(?<=Add support for `v)\d+\.\d+\.\d+' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
           if [ -z "$YT_VERSION" ]; then
             YT_VERSION="20.51.39"
@@ -82,12 +86,7 @@ jobs:
           echo "Target YouTube Version: $YT_VERSION"
 
           # This repo's latest release tag
-          THIS_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name // ""')
-          echo "this_repo_tag=$THIS_TAG" >> $GITHUB_OUTPUT
-          echo "This Repo Tag: $THIS_TAG"
-
-          # This repo's latest release tag
-          THIS_TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name // ""')
+          THIS_TAG=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name // ""')
           echo "this_repo_tag=$THIS_TAG" >> $GITHUB_OUTPUT
           echo "This Repo Tag: $THIS_TAG"
 
