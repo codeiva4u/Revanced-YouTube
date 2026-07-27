@@ -34,18 +34,20 @@ jobs:
           sudo apt-get install -y jq curl wget unzip
 
       # ──────────────────────────────────────────────────────────
-      # Step 1: Fetch latest releases from GitHub API
+      # Step 1: Fetch latest releases from GitHub API (authenticated)
       # ──────────────────────────────────────────────────────────
       - name: Fetch Latest Releases
         id: fetch-releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           INCLUDE_PRE="${{ inputs.include_prerelease }}"
           if [ -z "$INCLUDE_PRE" ]; then INCLUDE_PRE="true"; fi
 
           # Morphe Desktop CLI latest stable
-          CLI_RELEASE=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/MorpheApp/morphe-desktop/releases/latest)
+          CLI_RELEASE=$(gh api repos/MorpheApp/morphe-desktop/releases/latest 2>/dev/null || echo '{}')
           CLI_TAG=$(echo "$CLI_RELEASE" | jq -r '.tag_name // "v1.12.0"')
-          CLI_URL=$(echo "$CLI_RELEASE" | jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url')
+          CLI_URL=$(echo "$CLI_RELEASE" | jq -r '.assets[]? | select(.name | endswith("-all.jar")) | .browser_download_url // ""')
           if [ -z "$CLI_URL" ] || [ "$CLI_URL" = "null" ]; then
             CLI_URL="https://github.com/MorpheApp/morphe-desktop/releases/download/v1.12.0/morphe-desktop-1.12.0-all.jar"
             CLI_TAG="v1.12.0"
@@ -55,20 +57,29 @@ jobs:
           echo "Morphe CLI: $CLI_TAG ($CLI_URL)"
 
           # Anddea Patches - all releases (includes pre-release)
-          ALL_RELEASES=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/anddea/revanced-patches/releases)
           if [ "$INCLUDE_PRE" = "true" ]; then
-            ANDDEA_RELEASE=$(echo "$ALL_RELEASES" | jq '.[0]')
+            ALL_RELEASES=$(gh api repos/anddea/revanced-patches/releases 2>/dev/null || echo '[]')
+            ANDDEA_RELEASE=$(echo "$ALL_RELEASES" | jq 'if type=="array" and length > 0 then .[0] else {} end')
           else
-            ANDDEA_RELEASE=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/anddea/revanced-patches/releases/latest)
+            ANDDEA_RELEASE=$(gh api repos/anddea/revanced-patches/releases/latest 2>/dev/null || echo '{}')
           fi
 
-          ANDDEA_TAG=$(echo "$ANDDEA_RELEASE" | jq -r '.tag_name')
-          ANDDEA_PRE=$(echo "$ANDDEA_RELEASE" | jq -r '.prerelease')
-          ANDDEA_MPP=$(echo "$ANDDEA_RELEASE" | jq -r '.assets[] | select(.name | endswith(".mpp")) | .browser_download_url')
-          ANDDEA_BODY=$(echo "$ANDDEA_RELEASE" | jq -r '.body // "No release notes"')
+          ANDDEA_TAG=$(echo "$ANDDEA_RELEASE" | jq -r '.tag_name // ""')
+          if [ -z "$ANDDEA_TAG" ] || [ "$ANDDEA_TAG" = "null" ]; then
+            ANDDEA_RELEASE=$(gh api repos/anddea/revanced-patches/releases/latest 2>/dev/null || echo '{}')
+            ANDDEA_TAG=$(echo "$ANDDEA_RELEASE" | jq -r '.tag_name // "v4.2.0-dev.8"')
+          fi
+
+          ANDDEA_PRE=$(echo "$ANDDEA_RELEASE" | jq -r '.prerelease // false')
+          ANDDEA_MPP=$(echo "$ANDDEA_RELEASE" | jq -r '.assets[]? | select(.name | endswith(".mpp")) | .browser_download_url // ""')
+          if [ -z "$ANDDEA_MPP" ] || [ "$ANDDEA_MPP" = "null" ]; then
+            ANDDEA_MPP="https://github.com/anddea/revanced-patches/releases/download/${ANDDEA_TAG}/patches-${ANDDEA_TAG#v}.mpp"
+          fi
+
+          ANDDEA_BODY=$(echo "$ANDDEA_RELEASE" | jq -r '.body // "Release notes not available"')
 
           # YouTube version: search all releases for latest "Add support for vX.Y.Z" mention
-          ALL_BODIES=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/anddea/revanced-patches/releases | jq -r '.[].body // ""')
+          ALL_BODIES=$(gh api repos/anddea/revanced-patches/releases 2>/dev/null | jq -r 'if type=="array" then .[].body // "" else "" end' 2>/dev/null || echo "")
           YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '(?<=Add support for `v)\d+\.\d+\.\d+' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
           if [ -z "$YT_VERSION" ]; then
             YT_VERSION="20.51.39"
@@ -86,7 +97,7 @@ jobs:
           echo "Target YouTube Version: $YT_VERSION"
 
           # This repo's latest release tag
-          THIS_TAG=$(curl -s -L -H "User-Agent: GitHubActions" https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name // ""')
+          THIS_TAG=$(gh api repos/${{ github.repository }}/releases/latest 2>/dev/null | jq -r '.tag_name // ""' 2>/dev/null || echo "")
           echo "this_repo_tag=$THIS_TAG" >> $GITHUB_OUTPUT
           echo "This Repo Tag: $THIS_TAG"
 
