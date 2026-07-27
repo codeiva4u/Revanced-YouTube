@@ -4,6 +4,9 @@ permissions:
   contents: write
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 0 * * *'  # Daily at midnight UTC - checks for new patches
   workflow_dispatch:
@@ -112,10 +115,12 @@ jobs:
           LATEST="${{ steps.fetch-releases.outputs.anddea_tag }}"
           CURRENT="${{ steps.fetch-releases.outputs.this_repo_tag }}"
 
+          EVENT="${{ github.event_name }}"
+          echo "Trigger event: $EVENT"
           echo "Latest patch : $LATEST"
           echo "Current build: $CURRENT"
 
-          if [ "$FORCE" = "true" ] || [ "$LATEST" != "$CURRENT" ]; then
+          if [ "$FORCE" = "true" ] || [ "$EVENT" = "push" ] || [ "$EVENT" = "workflow_dispatch" ] || [ "$LATEST" != "$CURRENT" ]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
             echo "New patch detected or force-build requested. Proceeding."
           else
