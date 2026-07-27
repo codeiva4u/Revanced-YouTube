@@ -249,7 +249,12 @@ jobs:
           fi
 
           echo "2. Downloading Google Photos $GPHOTOS_VER stock APK..."
-          wget -q -O stock/gphotos-stock.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
+          curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
+
+          if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
+            echo "Primary mirror failed, trying secondary mirror..."
+            curl -s -L -A "Mozilla/5.0" -o stock/gphotos-stock.apk "https://github.com/mentalblank/GPhotos-Revanced/releases/download/39/googlephotos-de-vanced-v7.68.0.884121604-arm64-v8a.apk"
+          fi
 
           if [ ! -f "stock/gphotos-stock.apk" ]; then
             echo "ERROR: Google Photos stock APK missing!"
