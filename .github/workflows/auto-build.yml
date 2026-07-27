@@ -224,7 +224,7 @@ jobs:
             -b \
             --enable "GmsCore support" \
             --options "GmsCore support|gmsCoreVendorGroupId=app.revanced" \
-            --options "GmsCore support|packageNameYouTube=app.rvx.android.youtube" \
+            --options "GmsCore support|packageNameYouTube=com.revanced.youtube" \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk || \
           java -jar build_tools/revanced-cli.jar patch \
