@@ -194,8 +194,7 @@ jobs:
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
           GPHOTOS_VER="${{ steps.fetch-releases.outputs.gphotos_version }}"
 
-          echo "Downloading YouTube $YT_VER and Google Photos $GPHOTOS_VER from APKMirror via apkmd..."
-
+          echo "1. Downloading YouTube $YT_VER from APKMirror via apkmd..."
           cat > apkmd-config.json << EOF
           {
             "options": {
@@ -210,21 +209,14 @@ jobs:
                 "version": "${YT_VER}",
                 "type": "apk",
                 "outFile": "youtube-stock"
-              },
-              {
-                "org": "google-inc",
-                "repo": "google-photos",
-                "type": "apk",
-                "outFile": "gphotos-stock"
               }
             ]
           }
           EOF
 
-          cat apkmd-config.json
           build_tools/apkmd apkmd-config.json
 
-          # Verify downloads
+          # Verify YouTube stock APK
           if [ ! -f "stock/youtube-stock.apk" ]; then
             YT_APK=$(find stock -name "*youtube*.apk" -o -name "*YouTube*.apk" | head -1)
             if [ -n "$YT_APK" ]; then
@@ -235,17 +227,16 @@ jobs:
             fi
           fi
 
-          if [ ! -f "stock/gphotos-stock.apk" ]; then
-            GP_APK=$(find stock -name "*photos*.apk" -o -name "*Photos*.apk" | head -1)
-            if [ -n "$GP_APK" ]; then
-              mv "$GP_APK" stock/gphotos-stock.apk
-            else
-              echo "ERROR: Google Photos stock APK missing!"
-              exit 1
-            fi
+          echo "2. Downloading Google Photos $GPHOTOS_VER stock APKs (arm64-v8a & arm-v7a)..."
+          wget -q -O stock/gphotos-stock-arm64.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
+          wget -q -O stock/gphotos-stock-arm.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm-v7a.apk"
+
+          if [ ! -f "stock/gphotos-stock-arm64.apk" ]; then
+            echo "ERROR: Google Photos arm64 stock APK missing!"
+            exit 1
           fi
 
-          echo "Downloaded stock APKs:"
+          echo "Downloaded stock APKs successfully:"
           ls -lh stock/
 
       # ──────────────────────────────────────────────────────────
@@ -293,8 +284,12 @@ jobs:
             -o "$YT_OUTPUT" \
             stock/youtube-stock.apk
 
-          # 2. Patch Google Photos
-          echo "Patching Google Photos $GPHOTOS_VER with De-Vanced $DEVANCED_TAG ..."
+          # 2. Patch Google Photos (arm64-v8a & arm-v7a)
+          GP_OUTPUT_ARM64="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_arm64-v8a.apk"
+          GP_OUTPUT_ARM="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_arm-v7a.apk"
+          rm -f "$GP_OUTPUT_ARM64" "$GP_OUTPUT_ARM"
+
+          echo "Patching Google Photos $GPHOTOS_VER (arm64-v8a) with De-Vanced $DEVANCED_TAG ..."
           cat > gp-options.json << EOF
           [
             {
@@ -326,8 +321,21 @@ jobs:
             -e "Spoof build info" \
             -e "Enable DCIM folders backup control" \
             --options-file gp-options.json \
-            -o "$GP_OUTPUT" \
-            stock/gphotos-stock.apk
+            -o "$GP_OUTPUT_ARM64" \
+            stock/gphotos-stock-arm64.apk
+
+          if [ -f "stock/gphotos-stock-arm.apk" ]; then
+            echo "Patching Google Photos $GPHOTOS_VER (arm-v7a) ..."
+            java -jar build_tools/morphe-cli.jar patch \
+              -p build_tools/gphotos-patches.mpp \
+              -e "GmsCore support" \
+              -e "Spoof features" \
+              -e "Spoof build info" \
+              -e "Enable DCIM folders backup control" \
+              --options-file gp-options.json \
+              -o "$GP_OUTPUT_ARM" \
+              stock/gphotos-stock-arm.apk
+          fi
 
           echo "Verifying patched APKs..."
           ls -lh *.apk
