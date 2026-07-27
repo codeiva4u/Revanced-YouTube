@@ -350,12 +350,12 @@ jobs:
       # Step 7: Finalize & ZipAlign APK
       # Ensure the APK is properly signed and zip-aligned for Android 11+
       # ──────────────────────────────────────────────────────────
-      - name: Sign APKs
+      - name: Sign Patched APKs
         if: steps.check-build.outputs.should_build == 'true'
         run: |
-          echo "Signing all patched APKs..."
+          echo "Signing patched YouTube and Google Photos APKs..."
           
-          for apk in *.apk; do
+          for apk in YouTube-ReVanced-*.apk GooglePhotos-ReVanced-*.apk; do
             if [ -f "$apk" ]; then
               echo "Signing $apk ..."
               java -jar build_tools/uber-apk-signer.jar \
@@ -368,7 +368,7 @@ jobs:
             fi
           done
           
-          echo "APK signing complete!"
+          echo "APK signing complete! (MicroG-RE retains official developer signature)"
           ls -lh *.apk
 
       # ──────────────────────────────────────────────────────────
