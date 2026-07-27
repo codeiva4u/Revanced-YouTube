@@ -8,7 +8,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 0 * * *'  # Daily at midnight UTC - checks for new patches
+    - cron: '0 */6 * * *'  # Automatically checks for new YouTube & Google Photos patches every 6 hours
   workflow_dispatch:
     inputs:
       force_build:
