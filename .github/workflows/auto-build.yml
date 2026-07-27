@@ -42,13 +42,13 @@ jobs:
           INCLUDE_PRE="${{ inputs.include_prerelease }}"
           if [ -z "$INCLUDE_PRE" ]; then INCLUDE_PRE="true"; fi
 
-          # ReVanced CLI latest stable (v6.x)
-          CLI_RELEASE=$(curl -s https://api.github.com/repos/ReVanced/revanced-cli/releases/latest)
+          # Morphe CLI latest stable
+          CLI_RELEASE=$(curl -s https://api.github.com/repos/MorpheApp/morphe-cli/releases/latest)
           CLI_TAG=$(echo "$CLI_RELEASE" | jq -r '.tag_name')
           CLI_URL=$(echo "$CLI_RELEASE" | jq -r '.assets[] | select(.name | endswith("-all.jar")) | .browser_download_url')
           echo "cli_tag=$CLI_TAG" >> $GITHUB_OUTPUT
           echo "cli_url=$CLI_URL" >> $GITHUB_OUTPUT
-          echo "ReVanced CLI: $CLI_TAG"
+          echo "Morphe CLI: $CLI_TAG"
 
           # Anddea Patches - all releases (includes pre-release)
           ALL_RELEASES=$(curl -s https://api.github.com/repos/anddea/revanced-patches/releases)
@@ -114,14 +114,14 @@ jobs:
           fi
 
       # ──────────────────────────────────────────────────────────
-      # Step 3: Setup Java 17 (required by ReVanced CLI v6)
+      # Step 3: Setup Java 21 (required by Morphe CLI & .mpp patches)
       # ──────────────────────────────────────────────────────────
-      - name: Setup Java 17
+      - name: Setup Java 21
         if: steps.check-build.outputs.should_build == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       # ──────────────────────────────────────────────────────────
       # Step 4: Download ReVanced CLI v6, Anddea patches & apkmd
@@ -130,8 +130,8 @@ jobs:
         if: steps.check-build.outputs.should_build == 'true'
         run: |
           mkdir -p build_tools
-          echo "Downloading ReVanced CLI ${{ steps.fetch-releases.outputs.cli_tag }}..."
-          wget -q -O build_tools/revanced-cli.jar "${{ steps.fetch-releases.outputs.cli_url }}"
+          echo "Downloading Morphe CLI ${{ steps.fetch-releases.outputs.cli_tag }}..."
+          wget -q -O build_tools/morphe-cli.jar "${{ steps.fetch-releases.outputs.cli_url }}"
 
           echo "Downloading Anddea patches ${{ steps.fetch-releases.outputs.anddea_tag }}..."
           wget -q -O build_tools/patches.mpp "${{ steps.fetch-releases.outputs.anddea_mpp_url }}"
@@ -203,9 +203,7 @@ jobs:
           echo "YouTube $YT_VER stock APK downloaded successfully!"
 
       # ──────────────────────────────────────────────────────────
-      # Step 6: Patch Non-Root APK using ReVanced CLI v6 + .mpp
-      #
-      # We force package rename by passing CLI flags (-O)
+      # Step 6: Patch Non-Root APK using Morphe CLI + .mpp
       # ──────────────────────────────────────────────────────────
       - name: Patch Non-Root APK
         if: steps.check-build.outputs.should_build == 'true'
@@ -214,23 +212,15 @@ jobs:
           ANDDEA_TAG="${{ steps.fetch-releases.outputs.anddea_tag }}"
           OUTPUT_APK="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
 
-          echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
+          echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG using Morphe CLI..."
+          rm -f "$OUTPUT_APK"
 
-          # Patch command using --options for GmsCore support and package rename
-          # The package rename is done via "GmsCore support" patch with options
-          # Correct option keys from Anddea patches: gmsCoreVendorGroupId and packageNameYouTube
-          java -jar build_tools/revanced-cli.jar patch \
+          java -jar build_tools/morphe-cli.jar patch \
             -p build_tools/patches.mpp \
             -b \
             --enable "GmsCore support" \
             --options "GmsCore support|gmsCoreVendorGroupId=app.revanced" \
             --options "GmsCore support|packageNameYouTube=com.revanced.youtube" \
-            -o "$OUTPUT_APK" \
-            stock/youtube-stock.apk || \
-          java -jar build_tools/revanced-cli.jar patch \
-            -p build_tools/patches.mpp \
-            -b \
-            --enable "GmsCore support" \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk
 
@@ -241,6 +231,10 @@ jobs:
           fi
           PATCHED_SIZE=$(stat -c%s "$OUTPUT_APK")
           echo "Patched APK size: $PATCHED_SIZE bytes"
+          if [ "$PATCHED_SIZE" -lt 10000000 ]; then
+            echo "ERROR: Patched APK size too small ($PATCHED_SIZE bytes)! Patching failed."
+            exit 1
+          fi
           echo "output_apk=$OUTPUT_APK" >> $GITHUB_OUTPUT
         id: patch-apk
 
@@ -283,7 +277,7 @@ jobs:
             | Component | Version |
             |-----------|---------|
             | **YouTube (Stock)** | `${{ steps.fetch-releases.outputs.yt_version }}` |
-            | **ReVanced CLI** | `${{ steps.fetch-releases.outputs.cli_tag }}` |
+            | **Morphe CLI** | `${{ steps.fetch-releases.outputs.cli_tag }}` |
             | **Anddea Patches** | `${{ steps.fetch-releases.outputs.anddea_tag }}` |
             | **Stock APK Source** | [APKMirror](https://www.apkmirror.com/apk/google-inc/youtube/youtube-${{ steps.fetch-releases.outputs.yt_version }}-release/) |
 
