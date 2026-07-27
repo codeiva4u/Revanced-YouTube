@@ -230,7 +230,7 @@ jobs:
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG using Morphe CLI..."
           rm -f "$OUTPUT_APK"
 
-          # Create Morphe options.json for GmsCore support & custom package name
+          # Create Morphe options.json for GmsCore support & custom package name & Spoof video streams default client
           # Morphe CLI expects an Array of PatchBundles: [ { "patches": { ... } } ]
           cat > options.json << EOF
           [
@@ -241,6 +241,13 @@ jobs:
                   "options": {
                     "gmsCoreVendorGroupId": "app.revanced",
                     "packageNameYouTube": "com.revanced.youtube"
+                  }
+                },
+                "Spoof video streams": {
+                  "enabled": true,
+                  "options": {
+                    "defaultClient": "ANDROID_STUDIO",
+                    "defaultClientType": "ANDROID_STUDIO"
                   }
                 }
               }
@@ -253,6 +260,7 @@ jobs:
           java -jar build_tools/morphe-cli.jar patch \
             -p build_tools/patches.mpp \
             -e "GmsCore support" \
+            -e "Spoof video streams" \
             --options-file options.json \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk
