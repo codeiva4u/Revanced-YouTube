@@ -353,13 +353,27 @@ jobs:
       - name: Sign APKs
         if: steps.check-build.outputs.should_build == 'true'
         run: |
-          echo "Signing all APKs (YouTube, Google Photos, MicroG-RE) with uber-apk-signer..."
-          
+          echo "1. Generating Custom Release Keystore for Play Protect compatibility..."
+          keytool -genkeypair -v \
+            -keystore build_tools/release.keystore \
+            -alias revanced \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=ReVanced Build, OU=Mobile, O=ReVanced, L=Mountain View, ST=California, C=US"
+
+          echo "2. ZipAligning and Signing all APKs (YouTube, Google Photos, MicroG-RE) with uber-apk-signer..."
           for apk in *.apk; do
             if [ -f "$apk" ]; then
               echo "Signing $apk ..."
               java -jar build_tools/uber-apk-signer.jar \
                 --apks "$apk" \
+                --ks build_tools/release.keystore \
+                --ksAlias revanced \
+                --ksPass android \
+                --keyPass android \
                 --allowResign \
                 --overwrite \
                 --v1SigningEnabled true \
@@ -368,7 +382,7 @@ jobs:
             fi
           done
           
-          echo "All APKs signed and zip-aligned successfully!"
+          echo "All APKs signed with Custom Release Keystore and ZipAligned successfully!"
           ls -lh *.apk
 
       # ──────────────────────────────────────────────────────────
