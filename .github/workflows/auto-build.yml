@@ -3,6 +3,10 @@ name: Auto Build & Release YouTube ReVanced (Non-Root)
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
