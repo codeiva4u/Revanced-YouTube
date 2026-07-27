@@ -214,12 +214,27 @@ jobs:
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG using Morphe CLI..."
           rm -f "$OUTPUT_APK"
 
+          # Create Morphe options.json for GmsCore support & custom package name
+          cat > options.json << EOF
+          {
+            "patches": {
+              "GmsCore support": {
+                "enabled": true,
+                "options": {
+                  "gmsCoreVendorGroupId": "app.revanced",
+                  "packageNameYouTube": "com.revanced.youtube"
+                }
+              }
+            }
+          }
+          EOF
+
+          cat options.json
+
           java -jar build_tools/morphe-cli.jar patch \
             -p build_tools/patches.mpp \
-            -b \
-            --enable "GmsCore support" \
-            --options "GmsCore support|gmsCoreVendorGroupId=app.revanced" \
-            --options "GmsCore support|packageNameYouTube=com.revanced.youtube" \
+            -e "GmsCore support" \
+            --options-file options.json \
             -o "$OUTPUT_APK" \
             stock/youtube-stock.apk
 
