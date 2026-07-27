@@ -231,18 +231,21 @@ jobs:
           rm -f "$OUTPUT_APK"
 
           # Create Morphe options.json for GmsCore support & custom package name
+          # Morphe CLI expects an Array of PatchBundles: [ { "patches": { ... } } ]
           cat > options.json << EOF
-          {
-            "patches": {
-              "GmsCore support": {
-                "enabled": true,
-                "options": {
-                  "gmsCoreVendorGroupId": "app.revanced",
-                  "packageNameYouTube": "com.revanced.youtube"
+          [
+            {
+              "patches": {
+                "GmsCore support": {
+                  "enabled": true,
+                  "options": {
+                    "gmsCoreVendorGroupId": "app.revanced",
+                    "packageNameYouTube": "com.revanced.youtube"
+                  }
                 }
               }
             }
-          }
+          ]
           EOF
 
           cat options.json
