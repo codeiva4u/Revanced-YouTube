@@ -381,12 +381,9 @@ jobs:
                 --ks build_tools/release.keystore \
                 --ksAlias revanced \
                 --ksPass android \
-                --keyPass android \
+                --ksKeyPass android \
                 --allowResign \
-                --overwrite \
-                --v1SigningEnabled true \
-                --v2SigningEnabled true \
-                --v3SigningEnabled true
+                --overwrite
             fi
           done
           
