@@ -18,7 +18,7 @@ Supports both **ROOT** and **NON-ROOT** versions! 🚀
 Every release automatically builds and bundles:
 1. **YouTube ReVanced (Non-Root)** - `com.revanced.youtube`
 2. **Google Photos ReVanced (Non-Root)** - Pixel XL Unlimited Storage & Magic Eraser
-3. **ReVanced GmsCore (Play Protect Verified)** - `GmsCore-*.apk` companion for account login & background sync
+3. **MicroG-RE (Morphe)** - `MicroG-RE-*.apk` companion for account login & background sync
 ‎
 ## 🔧 Requirements  
 

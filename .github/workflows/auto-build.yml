@@ -115,23 +115,23 @@ jobs:
           echo "devanced_mpp_url=$DEVANCED_MPP" >> $GITHUB_OUTPUT
           echo "gphotos_version=$GPHOTOS_VERSION" >> $GITHUB_OUTPUT
 
-          # Official ReVanced GmsCore (Play Protect Verified)
-          GMS_RELEASE=$(gh api repos/ReVanced/GmsCore/releases/latest 2>/dev/null || echo '{}')
-          GMS_TAG=$(echo "$GMS_RELEASE" | jq -r '.tag_name // "v0.3.13.2.250932"')
-          GMS_URL=$(echo "$GMS_RELEASE" | jq -r '.assets[]? | select(.name | endswith("-signed.apk") and (contains("-hw-") | not)) | .browser_download_url // ""')
-          if [ -z "$GMS_URL" ] || [ "$GMS_URL" = "null" ]; then
-            GMS_URL="https://github.com/ReVanced/GmsCore/releases/download/v0.3.13.2.250932/app.revanced.android.gms-250932004-signed.apk"
-            GMS_TAG="v0.3.13.2.250932"
+          # MicroG-RE (GmsCore for Morphe / ReVanced)
+          MICROG_RELEASE=$(gh api repos/MorpheApp/MicroG-RE/releases/latest 2>/dev/null || echo '{}')
+          MICROG_TAG=$(echo "$MICROG_RELEASE" | jq -r '.tag_name // "6.1.4"')
+          MICROG_URL=$(echo "$MICROG_RELEASE" | jq -r '.assets[]? | select(.name | endswith(".apk")) | .browser_download_url // ""')
+          if [ -z "$MICROG_URL" ] || [ "$MICROG_URL" = "null" ]; then
+            MICROG_URL="https://github.com/MorpheApp/MicroG-RE/releases/download/6.1.4/microg-6.1.4.apk"
+            MICROG_TAG="6.1.4"
           fi
 
-          echo "gms_tag=$GMS_TAG" >> $GITHUB_OUTPUT
-          echo "gms_url=$GMS_URL" >> $GITHUB_OUTPUT
+          echo "microg_tag=$MICROG_TAG" >> $GITHUB_OUTPUT
+          echo "microg_url=$MICROG_URL" >> $GITHUB_OUTPUT
 
           echo "Anddea Patches (YouTube): $ANDDEA_TAG"
           echo "Target YouTube Version: $YT_VERSION"
           echo "De-Vanced Patches (Google Photos): $DEVANCED_TAG"
           echo "Target Google Photos Version: $GPHOTOS_VERSION"
-          echo "ReVanced GmsCore: $GMS_TAG ($GMS_URL)"
+          echo "MicroG-RE: $MICROG_TAG ($MICROG_URL)"
 
           # This repo's latest release tag
           THIS_TAG=$(gh api repos/${{ github.repository }}/releases/latest 2>/dev/null | jq -r '.tag_name // ""' 2>/dev/null || echo "")
@@ -197,12 +197,12 @@ jobs:
             https://github.com/tanishqmanuja/apkmirror-downloader/releases/latest/download/apkmd
           chmod +x build_tools/apkmd
 
-          echo "Downloading ReVanced GmsCore ${{ steps.fetch-releases.outputs.gms_tag }}..."
-          wget -q -O "GmsCore-${{ steps.fetch-releases.outputs.gms_tag }}.apk" "${{ steps.fetch-releases.outputs.gms_url }}"
+          echo "Downloading MicroG-RE ${{ steps.fetch-releases.outputs.microg_tag }}..."
+          wget -q -O "MicroG-RE-${{ steps.fetch-releases.outputs.microg_tag }}.apk" "${{ steps.fetch-releases.outputs.microg_url }}"
 
           echo "Tools ready:"
           ls -lh build_tools/
-          ls -lh GmsCore-*.apk
+          ls -lh MicroG-RE-*.apk
 
       # ──────────────────────────────────────────────────────────
       # Step 5: Download YouTube Stock APK via apkmd
@@ -348,14 +348,14 @@ jobs:
 
       # ──────────────────────────────────────────────────────────
       # Step 7: Finalize & ZipAlign APK
-      # Ensure the APK is properly signed and zip-aligned for Android 11+
+      # Ensure all APKs (YouTube, Google Photos, MicroG-RE) are properly signed and zip-aligned for Android 11+
       # ──────────────────────────────────────────────────────────
-      - name: Sign Patched APKs
+      - name: Sign APKs
         if: steps.check-build.outputs.should_build == 'true'
         run: |
-          echo "Signing patched YouTube and Google Photos APKs..."
+          echo "Signing all APKs (YouTube, Google Photos, MicroG-RE) with uber-apk-signer..."
           
-          for apk in YouTube-ReVanced-*.apk GooglePhotos-ReVanced-*.apk; do
+          for apk in *.apk; do
             if [ -f "$apk" ]; then
               echo "Signing $apk ..."
               java -jar build_tools/uber-apk-signer.jar \
@@ -368,7 +368,7 @@ jobs:
             fi
           done
           
-          echo "APK signing complete! (ReVanced GmsCore retains official signed certificate)"
+          echo "All APKs signed and zip-aligned successfully!"
           ls -lh *.apk
 
       # ──────────────────────────────────────────────────────────
@@ -383,7 +383,7 @@ jobs:
           echo "Checking for old assets in release $TAG ..."
           OLD_ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null || echo "")
           for asset in $OLD_ASSETS; do
-            if [[ "$asset" == GooglePhotos-ReVanced-NonRoot* ]] || [[ "$asset" == YouTube-ReVanced-NonRoot* ]]; then
+            if [[ "$asset" == GooglePhotos-ReVanced-NonRoot* ]] || [[ "$asset" == YouTube-ReVanced-NonRoot* ]] || [[ "$asset" == MicroG-RE* ]]; then
               echo "Deleting obsolete asset: $asset"
               gh release delete-asset "$TAG" "$asset" -y 2>/dev/null || true
             fi
@@ -409,17 +409,17 @@ jobs:
                - Features: Unlimited Original Quality Storage (Pixel XL Spoofing), Magic Eraser & GmsCore Support
                - Patches: De-Vanced `${{ steps.fetch-releases.outputs.devanced_tag }}`
 
-            3. **ReVanced GmsCore (Play Protect Verified)** `${{ steps.fetch-releases.outputs.gms_tag }}`
-               - Source: [ReVanced/GmsCore](https://github.com/ReVanced/GmsCore)
-               - Verified signed APK for Google account login & background sync on Non-Root devices
+            3. **MicroG-RE (GmsCore Companion)** `${{ steps.fetch-releases.outputs.microg_tag }}`
+               - Source: [MorpheApp/MicroG-RE](https://github.com/MorpheApp/MicroG-RE)
+               - Required for account login & background sync on Non-Root devices
 
             ### Installation:
-            1. Download and install **`GmsCore-*.apk`** first.
+            1. Download and install **`MicroG-RE-*.apk`** first.
             2. Install **YouTube ReVanced** and/or **Google Photos ReVanced**.
           files: |
             YouTube-ReVanced-NonRoot-*.apk
             GooglePhotos-ReVanced-NonRoot-*.apk
-            GmsCore-*.apk
+            MicroG-RE-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
