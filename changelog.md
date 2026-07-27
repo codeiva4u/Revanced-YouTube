@@ -1,4 +1,4 @@
-## YouTube ReVanced 20.51.39 (v4.2.0-dev.8) (2026-07-25)
+## YouTube ReVanced 20.51.39 (v4.2.0-dev.8) (2026-07-27)
 
 # [4.2.0-dev.8](https://github.com/anddea/revanced-patches/compare/v4.2.0-dev.7...v4.2.0-dev.8) (2026-07-24)
 
