@@ -284,9 +284,9 @@ jobs:
             -o "$YT_OUTPUT" \
             stock/youtube-stock.apk
 
-          # 2. Patch Google Photos (arm64-v8a & arm-v7a)
-          GP_OUTPUT_ARM64="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_arm64-v8a.apk"
-          GP_OUTPUT_ARM="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_arm-v7a.apk"
+          # 2. Patch Google Photos (arm64-v8a & arm-v7a - Universal Coverage)
+          GP_OUTPUT_ARM64="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_Universal_arm64-v8a.apk"
+          GP_OUTPUT_ARM="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_Universal_arm-v7a.apk"
           rm -f "$GP_OUTPUT_ARM64" "$GP_OUTPUT_ARM"
 
           echo "Patching Google Photos $GPHOTOS_VER (arm64-v8a) with De-Vanced $DEVANCED_TAG ..."
@@ -389,6 +389,7 @@ jobs:
 
             2. **Google Photos ReVanced** `${{ steps.fetch-releases.outputs.gphotos_version }}`
                - Features: Unlimited Original Quality Storage (Pixel XL Spoofing), Magic Eraser & GmsCore Support
+               - Architectures: `arm64-v8a` (All modern 64-bit devices) & `arm-v7a` (Legacy 32-bit devices)
                - Patches: De-Vanced `${{ steps.fetch-releases.outputs.devanced_tag }}`
 
             ### Installation:
