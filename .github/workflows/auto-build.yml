@@ -140,26 +140,31 @@ jobs:
 
       # ──────────────────────────────────────────────────────────
       # Step 2: Decide whether a new build is needed
+      # Checks updates for BOTH YouTube (Anddea) and Google Photos (De-Vanced)
       # ──────────────────────────────────────────────────────────
       - name: Check if Build Required
         id: check-build
         run: |
           FORCE="${{ inputs.force_build }}"
           if [ -z "$FORCE" ]; then FORCE="false"; fi
-          LATEST="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          ANDDEA="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          DEVANCED="${{ steps.fetch-releases.outputs.devanced_tag }}"
+          COMBINED_TAG="${ANDDEA}_${DEVANCED}"
           CURRENT="${{ steps.fetch-releases.outputs.this_repo_tag }}"
 
           EVENT="${{ github.event_name }}"
-          echo "Trigger event: $EVENT"
-          echo "Latest patch : $LATEST"
-          echo "Current build: $CURRENT"
+          echo "Trigger event    : $EVENT"
+          echo "Latest YT Patch  : $ANDDEA"
+          echo "Latest GP Patch  : $DEVANCED"
+          echo "Combined Target  : $COMBINED_TAG"
+          echo "Current Repo Build: $CURRENT"
 
-          if [ "$FORCE" = "true" ] || [ "$EVENT" = "push" ] || [ "$EVENT" = "workflow_dispatch" ] || [ "$LATEST" != "$CURRENT" ]; then
+          if [ "$FORCE" = "true" ] || [ "$EVENT" = "push" ] || [ "$EVENT" = "workflow_dispatch" ] || [ "$COMBINED_TAG" != "$CURRENT" ]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
-            echo "New patch detected or force-build requested. Proceeding."
+            echo "New patch update detected (YT or GPhotos) or force-build requested. Proceeding with build."
           else
             echo "should_build=false" >> $GITHUB_OUTPUT
-            echo "Already up-to-date. Skipping build."
+            echo "All patches are already up-to-date. Skipping build."
           fi
 
       # ──────────────────────────────────────────────────────────
