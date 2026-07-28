@@ -326,9 +326,6 @@ jobs:
                 },
                 "Spoof build info": {
                   "enabled": true
-                },
-                "Enable DCIM folders backup control": {
-                  "enabled": true
                 }
               }
             }
@@ -340,7 +337,6 @@ jobs:
             -e "GmsCore support" \
             -e "Spoof features" \
             -e "Spoof build info" \
-            -e "Enable DCIM folders backup control" \
             --options-file gp-options.json \
             -o "$GP_OUTPUT" \
             stock/gphotos-stock.apk
