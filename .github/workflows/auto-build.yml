@@ -301,7 +301,7 @@ jobs:
                 "Spoof video streams": {
                   "enabled": true,
                   "options": {
-                    "defaultClient": "ANDROID_STUDIO"
+                    "defaultClient": "ANDROID_CREATOR"
                   }
                 }
               }
