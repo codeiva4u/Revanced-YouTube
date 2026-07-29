@@ -100,8 +100,14 @@ jobs:
             YT_VERSION="20.51.39"
           fi
 
-          # Google Photos version
-          GPHOTOS_VERSION="7.68.0.884121604"
+          # Google Photos version: dynamically fetch latest version from APKMirror
+          GP_HTML=$(curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" "https://www.apkmirror.com/uploads/?appcategory=photos" 2>/dev/null || echo "")
+          LATEST_GP=$(echo "$GP_HTML" | grep -oP 'photos-\K\d+-\d+-\d+-\d+(?=-release)' | head -1 | tr '-' '.')
+          if [ -n "$LATEST_GP" ]; then
+            GPHOTOS_VERSION="$LATEST_GP"
+          else
+            GPHOTOS_VERSION="7.68.0.884121604"
+          fi
 
           echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
           echo "anddea_prerelease=$ANDDEA_PRE" >> $GITHUB_OUTPUT
@@ -249,10 +255,41 @@ jobs:
           fi
 
           echo "2. Downloading Google Photos $GPHOTOS_VER stock APK..."
-          curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
+          cat > gp-apkmd.json << EOF
+          {
+            "options": {
+              "arch": "arm64-v8a",
+              "dpi": "nodpi",
+              "outDir": "stock"
+            },
+            "apps": [
+              {
+                "org": "google-inc",
+                "repo": "photos",
+                "version": "${GPHOTOS_VER}",
+                "type": "apk",
+                "outFile": "gphotos-stock"
+              }
+            ]
+          }
+          EOF
+
+          build_tools/apkmd gp-apkmd.json || true
+
+          if [ ! -f "stock/gphotos-stock.apk" ]; then
+            GP_APK=$(find stock -name "*photos*.apk" -o -name "*Photos*.apk" | head -1)
+            if [ -n "$GP_APK" ]; then
+              mv "$GP_APK" stock/gphotos-stock.apk
+            fi
+          fi
 
           if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
-            echo "Primary mirror failed, trying secondary mirror..."
+            echo "apkmd fetch failed, downloading from fallback archive mirror..."
+            curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
+          fi
+
+          if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
+            echo "Archive mirror failed, downloading stable stock fallback..."
             curl -s -L -A "Mozilla/5.0" -o stock/gphotos-stock.apk "https://github.com/mentalblank/GPhotos-Revanced/releases/download/39/googlephotos-de-vanced-v7.68.0.884121604-arm64-v8a.apk"
           fi
 
@@ -329,6 +366,9 @@ jobs:
                 },
                 "Spoof build info": {
                   "enabled": true
+                },
+                "Fix selected account persistence": {
+                  "enabled": true
                 }
               }
             }
@@ -340,6 +380,7 @@ jobs:
             -e "GmsCore support" \
             -e "Spoof features" \
             -e "Spoof build info" \
+            -e "Fix selected account persistence" \
             --options-file gp-options.json \
             -o "$GP_OUTPUT" \
             stock/gphotos-stock.apk
