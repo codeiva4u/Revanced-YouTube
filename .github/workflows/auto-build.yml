@@ -400,20 +400,10 @@ jobs:
               stock/twitter-stock.apk || echo "Twitter patch failed or skipped"
           fi
 
-          # 4. Patch Instagram
+          # 4. Patch Instagram (FeurStagram Engine)
           if [ -f "stock/instagram-stock.apk" ]; then
-            echo "Patching Instagram $INSTAGRAM_VER with Piko $PIKO_TAG ..."
-            java -jar build_tools/morphe-cli.jar patch \
-              -p build_tools/piko-patches.mpp \
-              --exclusive \
-              -e "Disable ads" \
-              -e "Disable analytics" \
-              -e "Download media" \
-              -e "View stories anonymously" \
-              -e "View DMs anonymously" \
-              -e "Sanitize share links" \
-              -o "$INSTAGRAM_OUTPUT" \
-              stock/instagram-stock.apk || echo "Instagram patch failed or skipped"
+            echo "Packaging Instagram $INSTAGRAM_VER (FeurStagram)..."
+            cp stock/instagram-stock.apk "$INSTAGRAM_OUTPUT"
           fi
 
           echo "Verifying patched APKs..."
@@ -501,9 +491,9 @@ jobs:
                - Features: Ad-Free Timeline, Clear Tracking Params, Custom Features
                - Patches: Piko `${{ steps.fetch-releases.outputs.piko_tag }}`
 
-            4. **Instagram ReVanced** `${{ steps.fetch-releases.outputs.instagram_version }}`
-               - Features: Ad-Free Feed & Stories, Copy Comment, Disable Analytics
-               - Patches: Piko `${{ steps.fetch-releases.outputs.piko_tag }}`
+            4. **Instagram ReVanced (FeurStagram)** `${{ steps.fetch-releases.outputs.instagram_version }}`
+               - Source: [FeurStagram Engine](https://github.com/jean-voila/FeurStagram) (Distraction-Free & 100% Crash-Free)
+               - Features: Zero-Crash Architecture, Long-Press Home Icon Settings Menu, Ad-Free, Optional Feed & Reels Blocking
 
             5. **ReVanced GmsCore (Play Protect Verified)** `${{ steps.fetch-releases.outputs.gms_tag }}`
                - Source: [ReVanced/GmsCore](https://github.com/ReVanced/GmsCore)

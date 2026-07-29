@@ -4,6 +4,13 @@ import sys
 import os
 import json
 
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+}
+
+TWITTER_VERSION = "12.7.1-release.0"
+
 def get_html_curl(url):
     cmd = [
         "curl", "-s", "-L",
@@ -17,69 +24,36 @@ def get_html_curl(url):
     except Exception:
         return ""
 
-def get_latest_version(app_name):
-    if app_name == "twitter":
-        url = "https://www.apkmirror.com/apk/x-corp/x/"
-        pattern = r'href="(/apk/x-corp/x/x-([0-9\.-]+)-release/)"'
-        default_ver = "12.7.1-release.0"
-    elif app_name == "instagram":
-        url = "https://www.apkmirror.com/apk/instagram/instagram/"
-        pattern = r'href="(/apk/instagram/instagram/instagram-([0-9\.-]+)-release/)"'
-        default_ver = "435.0.0.37.76"
-    else:
-        return ""
-
-    html = get_html_curl(url)
-    matches = re.findall(pattern, html)
-    
-    stable_matches = []
-    for link, ver in matches:
-        if 'alpha' not in link.lower() and 'beta' not in link.lower():
-            ver_clean = ver.rstrip('-').replace('-', '.') if not app_name == 'twitter' else ver
-            stable_matches.append(ver_clean)
-            
-    if stable_matches:
-        return stable_matches[0]
-        
-    return default_ver
-
-def download_app_via_apkmd(app_name, version, out_path):
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    org = "x-corp" if app_name == "twitter" else "instagram"
-    repo = "x" if app_name == "twitter" else "instagram"
-    
-    config = {
-        "options": {
-            "arch": "universal" if app_name == "twitter" else "arm64-v8a",
-            "dpi": "nodpi",
-            "outDir": os.path.dirname(out_path)
-        },
-        "apps": [
-            {
-                "org": org,
-                "repo": repo,
-                "type": "apk",
-                "outFile": os.path.basename(out_path).replace('.apk', '')
-            }
-        ]
-    }
-    
-    if version:
-        config["apps"][0]["version"] = version
-        
-    config_file = f"apkmd-{app_name}.json"
-    with open(config_file, "w") as f:
-        json.dump(config, f, indent=2)
-        
+def get_feurstagram_info():
     try:
-        print(f"Downloading latest {app_name} stock APK via apkmd...")
-        subprocess.check_call(["build_tools/apkmd", config_file])
-        if os.path.exists(out_path) and os.path.getsize(out_path) > 10000000:
-            print(f"Successfully downloaded {app_name} stock APK ({os.path.getsize(out_path)} bytes)")
-            return True
+        req = urllib.request.Request("https://api.github.com/repos/jean-voila/FeurStagram/releases/latest", headers={'User-Agent': 'Mozilla/5.0'})
+        data = json.loads(urllib.request.urlopen(req).read().decode('utf-8'))
+        tag = data.get("tag_name", "v437-0-0-33-78")
+        version = tag.lstrip('v').replace('-', '.')
+        apk_url = ""
+        for asset in data.get("assets", []):
+            if asset['name'].endswith('.apk') and 'clone' not in asset['name']:
+                apk_url = asset['browser_download_url']
+                break
+        if not apk_url and data.get("assets"):
+            apk_url = data["assets"][0]['browser_download_url']
+        return version, apk_url, tag
     except Exception as e:
-        print(f"apkmd download error for {app_name}: {e}", file=sys.stderr)
-        
+        print(f"FeurStagram API warning: {e}", file=sys.stderr)
+        return "437.0.0.33.78", "https://github.com/jean-voila/FeurStagram/releases/download/v437-0-0-33-78/feurstagram-437-0-0-33-78.apk", "v437-0-0-33-78"
+
+def download_file(url, dest_path):
+    print(f"Downloading from {url} ...")
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req) as resp:
+        content = resp.read()
+        print(f"Downloaded size: {len(content)} bytes")
+        if len(content) > 5000000:
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            with open(dest_path, "wb") as f:
+                f.write(content)
+            print(f"Successfully saved to {dest_path}")
+            return True
     return False
 
 def main():
@@ -108,34 +82,51 @@ def main():
         return
 
     if action == "twitter_version":
-        ver = get_latest_version("twitter")
-        print(ver)
+        print(TWITTER_VERSION)
         return
 
     if action == "instagram_version":
-        ver = get_latest_version("instagram")
+        ver, _, _ = get_feurstagram_info()
         print(ver)
         return
 
     if action == "download_twitter":
-        ver = get_latest_version("twitter")
+        os.makedirs("stock", exist_ok=True)
         dest = "stock/twitter-stock.apk"
-        if not download_app_via_apkmd("twitter", ver, dest):
-            # Fallback download
-            fallback_url = "https://github.com/crimera/twitter-apk/releases/download/12.7.1-release.0/twitter-piko-v12.7.1-release.0.apk"
-            print("Downloading Twitter stock APK from fallback mirror...")
-            subprocess.check_call(["curl", "-s", "-L", "-o", dest, fallback_url])
-        return
+        
+        urls = [
+            "https://github.com/crimera/twitter-apk/releases/download/12.7.1-release.0/twitter-piko-v12.7.1-release.0.apk",
+            "https://github.com/krvstek/uni-apks/releases/download/26.07.24-piko/twitter-piko-v12.7.1-release.0-all.apk",
+            f"https://archive.org/download/jhc-apks/apks/com.twitter.android/com.twitter.android-{TWITTER_VERSION}-arm64-v8a.apk"
+        ]
+        
+        for url in urls:
+            try:
+                if download_file(url, dest):
+                    return
+            except Exception as e:
+                print(f"Mirror warning ({url}): {e}", file=sys.stderr)
+        sys.exit(1)
 
     if action == "download_instagram":
-        ver = get_latest_version("instagram")
+        os.makedirs("stock", exist_ok=True)
         dest = "stock/instagram-stock.apk"
-        if not download_app_via_apkmd("instagram", ver, dest):
-            # Fallback download
-            fallback_url = "https://github.com/krvstek/uni-apks/releases/download/26.07.24-piko/instagram-piko-v435.0.0.37.76-arm64-v8a.apk"
-            print("Downloading Instagram stock APK from fallback mirror...")
-            subprocess.check_call(["curl", "-s", "-L", "-o", dest, fallback_url])
-        return
+        
+        version, url, tag = get_feurstagram_info()
+        print(f"Downloading FeurStagram ({version}) from {url}...")
+        try:
+            if download_file(url, dest):
+                return
+        except Exception as e:
+            print(f"FeurStagram primary download warning: {e}", file=sys.stderr)
+
+        fallback_url = "https://github.com/jean-voila/FeurStagram/releases/download/v437-0-0-33-78/feurstagram-437-0-0-33-78.apk"
+        try:
+            if download_file(fallback_url, dest):
+                return
+        except Exception as e:
+            print(f"FeurStagram fallback download error: {e}", file=sys.stderr)
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()
