@@ -100,8 +100,8 @@ jobs:
             YT_VERSION="20.51.39"
           fi
 
-          # Google Photos version: stable tested version matching stock APK source
-          GPHOTOS_VERSION="7.68.0.884121604"
+          # Google Photos version: fetch latest version string via custom script
+          GPHOTOS_VERSION=$(python scripts/fetch_gphotos.py version 2>/dev/null || echo "7.85.0.952162352")
 
           echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
           echo "anddea_prerelease=$ANDDEA_PRE" >> $GITHUB_OUTPUT
@@ -248,37 +248,11 @@ jobs:
             fi
           fi
 
-          echo "2. Downloading Google Photos $GPHOTOS_VER stock APK..."
-          cat > gp-apkmd.json << EOF
-          {
-            "options": {
-              "arch": "arm64-v8a",
-              "dpi": "nodpi",
-              "outDir": "stock"
-            },
-            "apps": [
-              {
-                "org": "google-inc",
-                "repo": "photos",
-                "version": "${GPHOTOS_VER}",
-                "type": "apk",
-                "outFile": "gphotos-stock"
-              }
-            ]
-          }
-          EOF
-
-          build_tools/apkmd gp-apkmd.json || true
-
-          if [ ! -f "stock/gphotos-stock.apk" ]; then
-            GP_APK=$(find stock -name "*photos*.apk" -o -name "*Photos*.apk" | head -1)
-            if [ -n "$GP_APK" ]; then
-              mv "$GP_APK" stock/gphotos-stock.apk
-            fi
-          fi
+          echo "2. Downloading Google Photos $GPHOTOS_VER stock APK directly from APKMirror..."
+          python scripts/fetch_gphotos.py download || true
 
           if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
-            echo "Downloading Google Photos stock APK..."
+            echo "Direct APKMirror download failed, trying archive fallback..."
             curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
           fi
 
