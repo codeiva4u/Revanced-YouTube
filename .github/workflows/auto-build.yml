@@ -394,6 +394,8 @@ jobs:
               -p build_tools/piko-patches.mpp \
               -e "Bring back twitter" \
               -e "Clear tracking params" \
+              -e "Custom font" \
+              -e "Custom share menu" \
               -o "$TWITTER_OUTPUT" \
               stock/twitter-stock.apk || echo "Twitter patch failed or skipped"
           fi
@@ -406,6 +408,7 @@ jobs:
               -e "Disable ads" \
               -e "Disable analytics" \
               -e "Copy comment" \
+              -e "Allow user network certificate" \
               -o "$INSTAGRAM_OUTPUT" \
               stock/instagram-stock.apk || echo "Instagram patch failed or skipped"
           fi
@@ -414,6 +417,8 @@ jobs:
           ls -lh *.apk
           echo "yt_output=$YT_OUTPUT" >> $GITHUB_OUTPUT
           echo "gp_output=$GP_OUTPUT" >> $GITHUB_OUTPUT
+          echo "tw_output=$TWITTER_OUTPUT" >> $GITHUB_OUTPUT
+          echo "ig_output=$INSTAGRAM_OUTPUT" >> $GITHUB_OUTPUT
         id: patch-apk
 
       # ──────────────────────────────────────────────────────────
@@ -437,8 +442,8 @@ jobs:
           # Create fixed-name copies for permanent download links (releases/latest/download/...)
           YT_FILE=$(ls YouTube-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'YouTube-ReVanced-NonRoot.apk$' | head -1)
           GP_FILE=$(ls GooglePhotos-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'GooglePhotos-ReVanced-NonRoot.apk$' | head -1)
-          TW_FILE=$(ls Twitter-Piko-NonRoot-*.apk 2>/dev/null | grep -v 'Twitter-Piko-NonRoot.apk$' | head -1)
-          IG_FILE=$(ls Instagram-Piko-NonRoot-*.apk 2>/dev/null | grep -v 'Instagram-Piko-NonRoot.apk$' | head -1)
+          TW_FILE=$(ls Twitter-Piko-*.apk 2>/dev/null | grep -v 'Twitter-Piko-NonRoot.apk$' | head -1)
+          IG_FILE=$(ls Instagram-Piko-*.apk 2>/dev/null | grep -v 'Instagram-Piko-NonRoot.apk$' | head -1)
           GMS_FILE=$(ls GmsCore-*.apk 2>/dev/null | grep -v 'GmsCore.apk$' | head -1)
 
           if [ -n "$YT_FILE" ] && [ -f "$YT_FILE" ]; then cp "$YT_FILE" YouTube-ReVanced-NonRoot.apk; fi
@@ -462,7 +467,7 @@ jobs:
           echo "Checking for old assets in release $TAG ..."
           OLD_ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null || echo "")
           for asset in $OLD_ASSETS; do
-            if [[ "$asset" == GooglePhotos-ReVanced-NonRoot* ]] || [[ "$asset" == YouTube-ReVanced-NonRoot* ]] || [[ "$asset" == GmsCore* ]] || [[ "$asset" == MicroG-RE* ]]; then
+            if [[ "$asset" == GooglePhotos-ReVanced-NonRoot* ]] || [[ "$asset" == YouTube-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-Piko-NonRoot* ]] || [[ "$asset" == Instagram-Piko-NonRoot* ]] || [[ "$asset" == GmsCore* ]] || [[ "$asset" == MicroG-RE* ]]; then
               echo "Deleting obsolete asset: $asset"
               gh release delete-asset "$TAG" "$asset" -y 2>/dev/null || true
             fi
@@ -473,11 +478,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.fetch-releases.outputs.anddea_tag }}
-          name: "YouTube & Google Photos ReVanced (${{ steps.fetch-releases.outputs.anddea_tag }})"
+          name: "YouTube, Google Photos, Twitter & Instagram ReVanced (${{ steps.fetch-releases.outputs.anddea_tag }})"
           prerelease: false
           make_latest: true
           body: |
-            ## Auto Build - YouTube & Google Photos ReVanced (Non-Root)
+            ## Auto Build - Multi App ReVanced (Non-Root)
 
             ### Packages Included:
             1. **YouTube ReVanced** `${{ steps.fetch-releases.outputs.yt_version }}`
@@ -489,13 +494,21 @@ jobs:
                - Features: Unlimited Original Quality Storage (Pixel XL Spoofing), Magic Eraser & GmsCore Support
                - Patches: De-Vanced `${{ steps.fetch-releases.outputs.devanced_tag }}`
 
-            3. **ReVanced GmsCore (Play Protect Verified)** `${{ steps.fetch-releases.outputs.gms_tag }}`
+            3. **Twitter (X) Piko ReVanced** `${{ steps.fetch-releases.outputs.twitter_version }}`
+               - Features: Ad-Free Timeline, Clear Tracking Params, Custom Features
+               - Patches: Piko `${{ steps.fetch-releases.outputs.piko_tag }}`
+
+            4. **Instagram Piko ReVanced** `${{ steps.fetch-releases.outputs.instagram_version }}`
+               - Features: Ad-Free Feed & Stories, Copy Comment, Disable Analytics
+               - Patches: Piko `${{ steps.fetch-releases.outputs.piko_tag }}`
+
+            5. **ReVanced GmsCore (Play Protect Verified)** `${{ steps.fetch-releases.outputs.gms_tag }}`
                - Source: [ReVanced/GmsCore](https://github.com/ReVanced/GmsCore)
                - Verified signed APK for Google account login & background sync on Non-Root devices (No Play Protect warnings)
 
             ### Installation:
-            1. Download and install **`GmsCore-*.apk`** first.
-            2. Install **YouTube ReVanced** and/or **Google Photos ReVanced**.
+            1. Download and install **`GmsCore-*.apk`** first for YouTube and Google Photos login.
+            2. Install any of the patched apps: **YouTube ReVanced**, **Google Photos ReVanced**, **Twitter Piko**, or **Instagram Piko**.
           files: |
             YouTube-ReVanced-NonRoot-*.apk
             YouTube-ReVanced-NonRoot.apk
