@@ -21,8 +21,8 @@ Supports both **ROOT** and **NON-ROOT** versions! 🚀
 |---|---|
 | 📺 **YouTube ReVanced (Non-Root)** | 🔗 [Download YouTube-ReVanced-NonRoot.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/YouTube-ReVanced-NonRoot.apk) |
 | 📸 **Google Photos ReVanced** | 🔗 [Download GooglePhotos-ReVanced-NonRoot.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/GooglePhotos-ReVanced-NonRoot.apk) |
-| 𝕏 **Twitter (X) Piko ReVanced** | 🔗 [Download Twitter-Piko-NonRoot.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/Twitter-Piko-NonRoot.apk) |
-| 📷 **Instagram Piko ReVanced** | 🔗 [Download Instagram-Piko-NonRoot.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/Instagram-Piko-NonRoot.apk) |
+| 𝕏 **Twitter (X) ReVanced** | 🔗 [Download Twitter-ReVanced-NonRoot.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/Twitter-ReVanced-NonRoot.apk) |
+| 📷 **Instagram ReVanced** | 🔗 [Download Instagram-ReVanced-NonRoot.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/Instagram-ReVanced-NonRoot.apk) |
 | 🔑 **ReVanced GmsCore** | 🔗 [Download GmsCore.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/GmsCore.apk) |
 
 ---

@@ -314,8 +314,8 @@ jobs:
 
           YT_OUTPUT="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
           GP_OUTPUT="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_${DEVANCED_TAG}.apk"
-          TWITTER_OUTPUT="Twitter-Piko-NonRoot-${TWITTER_VER}_${PIKO_TAG}.apk"
-          INSTAGRAM_OUTPUT="Instagram-Piko-NonRoot-${INSTAGRAM_VER}_${PIKO_TAG}.apk"
+          TWITTER_OUTPUT="Twitter-ReVanced-NonRoot-${TWITTER_VER}_${PIKO_TAG}.apk"
+          INSTAGRAM_OUTPUT="Instagram-ReVanced-NonRoot-${INSTAGRAM_VER}_${PIKO_TAG}.apk"
 
           rm -f "$YT_OUTPUT" "$GP_OUTPUT" "$TWITTER_OUTPUT" "$INSTAGRAM_OUTPUT"
 
@@ -423,7 +423,7 @@ jobs:
         if: steps.check-build.outputs.should_build == 'true'
         run: |
           echo "Signing YouTube, Google Photos, Twitter, and Instagram APKs..."
-          for apk in YouTube-ReVanced-*.apk GooglePhotos-ReVanced-*.apk Twitter-Piko-*.apk Instagram-Piko-*.apk; do
+          for apk in YouTube-ReVanced-*.apk GooglePhotos-ReVanced-*.apk Twitter-ReVanced-*.apk Instagram-ReVanced-*.apk; do
             if [ -f "$apk" ]; then
               echo "Signing $apk ..."
               java -jar build_tools/uber-apk-signer.jar \
@@ -436,14 +436,14 @@ jobs:
           # Create fixed-name copies for permanent download links (releases/latest/download/...)
           YT_FILE=$(ls YouTube-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'YouTube-ReVanced-NonRoot.apk$' | head -1)
           GP_FILE=$(ls GooglePhotos-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'GooglePhotos-ReVanced-NonRoot.apk$' | head -1)
-          TW_FILE=$(ls Twitter-Piko-*.apk 2>/dev/null | grep -v 'Twitter-Piko-NonRoot.apk$' | head -1)
-          IG_FILE=$(ls Instagram-Piko-*.apk 2>/dev/null | grep -v 'Instagram-Piko-NonRoot.apk$' | head -1)
+          TW_FILE=$(ls Twitter-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'Twitter-ReVanced-NonRoot.apk$' | head -1)
+          IG_FILE=$(ls Instagram-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'Instagram-ReVanced-NonRoot.apk$' | head -1)
           GMS_FILE=$(ls GmsCore-*.apk 2>/dev/null | grep -v 'GmsCore.apk$' | head -1)
 
           if [ -n "$YT_FILE" ] && [ -f "$YT_FILE" ]; then cp "$YT_FILE" YouTube-ReVanced-NonRoot.apk; fi
           if [ -n "$GP_FILE" ] && [ -f "$GP_FILE" ]; then cp "$GP_FILE" GooglePhotos-ReVanced-NonRoot.apk; fi
-          if [ -n "$TW_FILE" ] && [ -f "$TW_FILE" ]; then cp "$TW_FILE" Twitter-Piko-NonRoot.apk; fi
-          if [ -n "$IG_FILE" ] && [ -f "$IG_FILE" ]; then cp "$IG_FILE" Instagram-Piko-NonRoot.apk; fi
+          if [ -n "$TW_FILE" ] && [ -f "$TW_FILE" ]; then cp "$TW_FILE" Twitter-ReVanced-NonRoot.apk; fi
+          if [ -n "$IG_FILE" ] && [ -f "$IG_FILE" ]; then cp "$IG_FILE" Instagram-ReVanced-NonRoot.apk; fi
           if [ -n "$GMS_FILE" ] && [ -f "$GMS_FILE" ]; then cp "$GMS_FILE" GmsCore.apk; fi
           
           echo "Patched APKs signed and zipaligned successfully:"
@@ -461,7 +461,7 @@ jobs:
           echo "Checking for old assets in release $TAG ..."
           OLD_ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null || echo "")
           for asset in $OLD_ASSETS; do
-            if [[ "$asset" == GooglePhotos-ReVanced-NonRoot* ]] || [[ "$asset" == YouTube-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-Piko-NonRoot* ]] || [[ "$asset" == Instagram-Piko-NonRoot* ]] || [[ "$asset" == GmsCore* ]] || [[ "$asset" == MicroG-RE* ]]; then
+            if [[ "$asset" == GooglePhotos-ReVanced-NonRoot* ]] || [[ "$asset" == YouTube-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-ReVanced-NonRoot* ]] || [[ "$asset" == Instagram-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-Piko-NonRoot* ]] || [[ "$asset" == Instagram-Piko-NonRoot* ]] || [[ "$asset" == GmsCore* ]] || [[ "$asset" == MicroG-RE* ]]; then
               echo "Deleting obsolete asset: $asset"
               gh release delete-asset "$TAG" "$asset" -y 2>/dev/null || true
             fi
@@ -488,11 +488,11 @@ jobs:
                - Features: Unlimited Original Quality Storage (Pixel XL Spoofing), Magic Eraser & GmsCore Support
                - Patches: De-Vanced `${{ steps.fetch-releases.outputs.devanced_tag }}`
 
-            3. **Twitter (X) Piko ReVanced** `${{ steps.fetch-releases.outputs.twitter_version }}`
+            3. **Twitter (X) ReVanced** `${{ steps.fetch-releases.outputs.twitter_version }}`
                - Features: Ad-Free Timeline, Clear Tracking Params, Custom Features
                - Patches: Piko `${{ steps.fetch-releases.outputs.piko_tag }}`
 
-            4. **Instagram Piko ReVanced** `${{ steps.fetch-releases.outputs.instagram_version }}`
+            4. **Instagram ReVanced** `${{ steps.fetch-releases.outputs.instagram_version }}`
                - Features: Ad-Free Feed & Stories, Copy Comment, Disable Analytics
                - Patches: Piko `${{ steps.fetch-releases.outputs.piko_tag }}`
 
@@ -502,16 +502,16 @@ jobs:
 
             ### Installation:
             1. Download and install **`GmsCore-*.apk`** first for YouTube and Google Photos login.
-            2. Install any of the patched apps: **YouTube ReVanced**, **Google Photos ReVanced**, **Twitter Piko**, or **Instagram Piko**.
+            2. Install any of the patched apps: **YouTube ReVanced**, **Google Photos ReVanced**, **Twitter ReVanced**, or **Instagram ReVanced**.
           files: |
             YouTube-ReVanced-NonRoot-*.apk
             YouTube-ReVanced-NonRoot.apk
             GooglePhotos-ReVanced-NonRoot-*.apk
             GooglePhotos-ReVanced-NonRoot.apk
-            Twitter-Piko-NonRoot-*.apk
-            Twitter-Piko-NonRoot.apk
-            Instagram-Piko-NonRoot-*.apk
-            Instagram-Piko-NonRoot.apk
+            Twitter-ReVanced-NonRoot-*.apk
+            Twitter-ReVanced-NonRoot.apk
+            Instagram-ReVanced-NonRoot-*.apk
+            Instagram-ReVanced-NonRoot.apk
             GmsCore-*.apk
             GmsCore.apk
         env:
