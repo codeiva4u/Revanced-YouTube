@@ -405,7 +405,12 @@ jobs:
             echo "Patching Instagram $INSTAGRAM_VER with Piko $PIKO_TAG ..."
             java -jar build_tools/morphe-cli.jar patch \
               -p build_tools/piko-patches.mpp \
-              --continue-on-error \
+              -e "Disable ads" \
+              -e "Disable analytics" \
+              -e "Copy comment" \
+              -e "Download media" \
+              -e "View DMs anonymously" \
+              -e "View stories anonymously" \
               -o "$INSTAGRAM_OUTPUT" \
               stock/instagram-stock.apk || echo "Instagram patch failed or skipped"
           fi
