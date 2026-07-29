@@ -100,13 +100,13 @@ jobs:
             YT_VERSION="20.51.39"
           fi
 
-          # Google Photos version: dynamically fetch latest version from APKMirror
+          # Google Photos version: target latest stock version
           GP_HTML=$(curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" "https://www.apkmirror.com/uploads/?appcategory=photos" 2>/dev/null || echo "")
           LATEST_GP=$(echo "$GP_HTML" | grep -oP 'photos-\K\d+-\d+-\d+-\d+(?=-release)' | head -1 | tr '-' '.')
           if [ -n "$LATEST_GP" ]; then
             GPHOTOS_VERSION="$LATEST_GP"
           else
-            GPHOTOS_VERSION="7.68.0.884121604"
+            GPHOTOS_VERSION="7.84.0.951035818"
           fi
 
           echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
@@ -281,6 +281,11 @@ jobs:
             if [ -n "$GP_APK" ]; then
               mv "$GP_APK" stock/gphotos-stock.apk
             fi
+          fi
+
+          if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
+            echo "Direct downloading Google Photos stock from APKMirror link..."
+            curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=14988493&key=001a2bfc5ed9d2c4b6d15e6868481c793fde75c8&forcebaseapk=true"
           fi
 
           if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
