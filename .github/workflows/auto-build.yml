@@ -369,12 +369,13 @@ jobs:
           done
 
           # Create fixed-name copies for permanent download links (releases/latest/download/...)
-          cp "$YT_OUTPUT" YouTube-ReVanced-NonRoot.apk
-          cp "$GP_OUTPUT" GooglePhotos-ReVanced-NonRoot.apk
-          GMS_FILE=$(ls GmsCore-*.apk | head -1)
-          if [ -f "$GMS_FILE" ]; then
-            cp "$GMS_FILE" GmsCore.apk
-          fi
+          YT_FILE=$(ls YouTube-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'YouTube-ReVanced-NonRoot.apk$' | head -1)
+          GP_FILE=$(ls GooglePhotos-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'GooglePhotos-ReVanced-NonRoot.apk$' | head -1)
+          GMS_FILE=$(ls GmsCore-*.apk 2>/dev/null | grep -v 'GmsCore.apk$' | head -1)
+
+          if [ -n "$YT_FILE" ] && [ -f "$YT_FILE" ]; then cp "$YT_FILE" YouTube-ReVanced-NonRoot.apk; fi
+          if [ -n "$GP_FILE" ] && [ -f "$GP_FILE" ]; then cp "$GP_FILE" GooglePhotos-ReVanced-NonRoot.apk; fi
+          if [ -n "$GMS_FILE" ] && [ -f "$GMS_FILE" ]; then cp "$GMS_FILE" GmsCore.apk; fi
           
           echo "Patched APKs signed and zipaligned successfully:"
           ls -lh *.apk
