@@ -392,6 +392,9 @@ jobs:
             echo "Patching Twitter (X) $TWITTER_VER with Piko $PIKO_TAG ..."
             java -jar build_tools/morphe-cli.jar patch \
               -p build_tools/piko-patches.mpp \
+              -d "Bring back twitter" \
+              -d "Change app icon" \
+              -d "Show changelogs" \
               --continue-on-error \
               -o "$TWITTER_OUTPUT" \
               stock/twitter-stock.apk || echo "Twitter patch failed or skipped"
