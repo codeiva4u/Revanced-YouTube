@@ -392,6 +392,7 @@ jobs:
             echo "Patching Twitter (X) $TWITTER_VER with Piko $PIKO_TAG ..."
             java -jar build_tools/morphe-cli.jar patch \
               -p build_tools/piko-patches.mpp \
+              -a com.twitter.android \
               -e "Bring back twitter" \
               -e "Clear tracking params" \
               -e "Remove Ads" \
@@ -406,6 +407,7 @@ jobs:
             echo "Patching Instagram $INSTAGRAM_VER with Piko $PIKO_TAG ..."
             java -jar build_tools/morphe-cli.jar patch \
               -p build_tools/piko-patches.mpp \
+              -a com.instagram.android \
               -e "Disable ads" \
               -e "Disable analytics" \
               -e "Copy comment" \
