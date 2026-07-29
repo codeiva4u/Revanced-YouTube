@@ -1,4 +1,4 @@
-## YouTube ReVanced 21.29.366 (v1.37.0) (2026-07-29)
+## YouTube ReVanced 21.04.223 (v1.37.0) (2026-07-29)
 
 ## [1.37.0](https://github.com/MorpheApp/morphe-patches/compare/v1.36.0...v1.37.0) (2026-07-26)
 
