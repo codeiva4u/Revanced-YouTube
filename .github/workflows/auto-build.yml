@@ -314,7 +314,7 @@ jobs:
 
           YT_OUTPUT="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
           GP_OUTPUT="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_${DEVANCED_TAG}.apk"
-          TWITTER_OUTPUT="Twitter-ReVanced-NonRoot-${TWITTER_VER}_${PIKO_TAG}.apk"
+          TWITTER_OUTPUT="Twitter-X-ReVanced-NonRoot-${TWITTER_VER}_${PIKO_TAG}.apk"
           INSTAGRAM_OUTPUT="Instagram-ReVanced-NonRoot-${INSTAGRAM_VER}_${PIKO_TAG}.apk"
 
           rm -f "$YT_OUTPUT" "$GP_OUTPUT" "$TWITTER_OUTPUT" "$INSTAGRAM_OUTPUT"
@@ -425,8 +425,8 @@ jobs:
       - name: Sign APKs
         if: steps.check-build.outputs.should_build == 'true'
         run: |
-          echo "Signing YouTube, Google Photos, Twitter, and Instagram APKs..."
-          for apk in YouTube-ReVanced-*.apk GooglePhotos-ReVanced-*.apk Twitter-ReVanced-*.apk Instagram-ReVanced-*.apk; do
+          echo "Signing YouTube, Google Photos, Twitter (X), and Instagram APKs..."
+          for apk in YouTube-ReVanced-*.apk GooglePhotos-ReVanced-*.apk Twitter-X-ReVanced-*.apk Twitter-ReVanced-*.apk Instagram-ReVanced-*.apk; do
             if [ -f "$apk" ]; then
               echo "Signing $apk ..."
               java -jar build_tools/uber-apk-signer.jar \
@@ -439,13 +439,13 @@ jobs:
           # Create fixed-name copies for permanent download links (releases/latest/download/...)
           YT_FILE=$(ls YouTube-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'YouTube-ReVanced-NonRoot.apk$' | head -1)
           GP_FILE=$(ls GooglePhotos-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'GooglePhotos-ReVanced-NonRoot.apk$' | head -1)
-          TW_FILE=$(ls Twitter-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'Twitter-ReVanced-NonRoot.apk$' | head -1)
+          TW_FILE=$(ls Twitter-X-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'Twitter-X-ReVanced-NonRoot.apk$' | head -1)
           IG_FILE=$(ls Instagram-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'Instagram-ReVanced-NonRoot.apk$' | head -1)
           GMS_FILE=$(ls GmsCore-*.apk 2>/dev/null | grep -v 'GmsCore.apk$' | head -1)
 
           if [ -n "$YT_FILE" ] && [ -f "$YT_FILE" ]; then cp "$YT_FILE" YouTube-ReVanced-NonRoot.apk; fi
           if [ -n "$GP_FILE" ] && [ -f "$GP_FILE" ]; then cp "$GP_FILE" GooglePhotos-ReVanced-NonRoot.apk; fi
-          if [ -n "$TW_FILE" ] && [ -f "$TW_FILE" ]; then cp "$TW_FILE" Twitter-ReVanced-NonRoot.apk; fi
+          if [ -n "$TW_FILE" ] && [ -f "$TW_FILE" ]; then cp "$TW_FILE" Twitter-X-ReVanced-NonRoot.apk; fi
           if [ -n "$IG_FILE" ] && [ -f "$IG_FILE" ]; then cp "$IG_FILE" Instagram-ReVanced-NonRoot.apk; fi
           if [ -n "$GMS_FILE" ] && [ -f "$GMS_FILE" ]; then cp "$GMS_FILE" GmsCore.apk; fi
           
@@ -464,7 +464,7 @@ jobs:
           echo "Checking for old assets in release $TAG ..."
           OLD_ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null || echo "")
           for asset in $OLD_ASSETS; do
-            if [[ "$asset" == GooglePhotos-ReVanced-NonRoot* ]] || [[ "$asset" == YouTube-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-ReVanced-NonRoot* ]] || [[ "$asset" == Instagram-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-Piko-NonRoot* ]] || [[ "$asset" == Instagram-Piko-NonRoot* ]] || [[ "$asset" == GmsCore* ]] || [[ "$asset" == MicroG-RE* ]]; then
+            if [[ "$asset" == GooglePhotos-ReVanced-NonRoot* ]] || [[ "$asset" == YouTube-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-X-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-ReVanced-NonRoot* ]] || [[ "$asset" == Instagram-ReVanced-NonRoot* ]] || [[ "$asset" == Twitter-Piko-NonRoot* ]] || [[ "$asset" == Instagram-Piko-NonRoot* ]] || [[ "$asset" == GmsCore* ]] || [[ "$asset" == MicroG-RE* ]]; then
               echo "Deleting obsolete asset: $asset"
               gh release delete-asset "$TAG" "$asset" -y 2>/dev/null || true
             fi
@@ -511,8 +511,8 @@ jobs:
             YouTube-ReVanced-NonRoot.apk
             GooglePhotos-ReVanced-NonRoot-*.apk
             GooglePhotos-ReVanced-NonRoot.apk
-            Twitter-ReVanced-NonRoot-*.apk
-            Twitter-ReVanced-NonRoot.apk
+            Twitter-X-ReVanced-NonRoot-*.apk
+            Twitter-X-ReVanced-NonRoot.apk
             Instagram-ReVanced-NonRoot-*.apk
             Instagram-ReVanced-NonRoot.apk
             GmsCore-*.apk
