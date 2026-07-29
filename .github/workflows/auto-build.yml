@@ -81,9 +81,9 @@ jobs:
             DEVANCED_MPP="https://github.com/RookieEnough/De-Vanced/releases/download/${DEVANCED_TAG}/patches-${DEVANCED_TAG#v}.mpp"
           fi
 
-          # YouTube version: fetch latest supported version from Morphe release notes
+          # YouTube version: search MorpheApp releases for target version
           ALL_BODIES=$(gh api repos/MorpheApp/morphe-patches/releases 2>/dev/null | jq -r 'if type=="array" then .[].body // "" else "" end' 2>/dev/null || echo "")
-          YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '20\.\d+\.\d+' | head -1)
+          YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '20\.\d+\.\d+' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
           if [ -z "$YT_VERSION" ]; then
             YT_VERSION="20.51.39"
           fi
@@ -242,11 +242,11 @@ jobs:
           fi
 
           echo "2. Downloading Google Photos $GPHOTOS_VER stock APK..."
-          curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
+          curl -s -L --max-time 180 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
 
           if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
-            echo "Primary mirror failed, trying secondary mirror..."
-            curl -s -L -A "Mozilla/5.0" -o stock/gphotos-stock.apk "https://github.com/mentalblank/GPhotos-Revanced/releases/download/39/googlephotos-de-vanced-v7.68.0.884121604-arm64-v8a.apk"
+            echo "Primary mirror failed or incomplete, trying secondary mirror..."
+            curl -s -L --max-time 180 -A "Mozilla/5.0" -o stock/gphotos-stock.apk "https://github.com/mentalblank/GPhotos-Revanced/releases/download/39/googlephotos-de-vanced-v7.68.0.884121604-arm64-v8a.apk"
           fi
 
           if [ ! -f "stock/gphotos-stock.apk" ]; then
