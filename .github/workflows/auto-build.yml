@@ -384,6 +384,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.fetch-releases.outputs.morphe_tag }}
+          target_commitish: ${{ github.sha }}
           name: "YouTube & Google Photos ReVanced (${{ steps.fetch-releases.outputs.morphe_tag }})"
           prerelease: ${{ steps.fetch-releases.outputs.morphe_prerelease }}
           body: |
@@ -460,8 +461,9 @@ jobs:
       # ──────────────────────────────────────────────────────────
       - name: Delete Old Workflow Runs
         uses: Mattraks/delete-workflow-runs@v2
+        continue-on-error: true
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
           repository: ${{ github.repository }}
           retain_days: 3
           keep_minimum_runs: 5
