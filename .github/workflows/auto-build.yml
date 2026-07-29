@@ -100,14 +100,8 @@ jobs:
             YT_VERSION="20.51.39"
           fi
 
-          # Google Photos version: target latest stock version
-          GP_HTML=$(curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" "https://www.apkmirror.com/uploads/?appcategory=photos" 2>/dev/null || echo "")
-          LATEST_GP=$(echo "$GP_HTML" | grep -oP 'photos-\K\d+-\d+-\d+-\d+(?=-release)' | head -1 | tr '-' '.')
-          if [ -n "$LATEST_GP" ]; then
-            GPHOTOS_VERSION="$LATEST_GP"
-          else
-            GPHOTOS_VERSION="7.84.0.951035818"
-          fi
+          # Google Photos version: stable tested version matching stock APK source
+          GPHOTOS_VERSION="7.68.0.884121604"
 
           echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
           echo "anddea_prerelease=$ANDDEA_PRE" >> $GITHUB_OUTPUT
@@ -284,17 +278,12 @@ jobs:
           fi
 
           if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
-            echo "Direct downloading Google Photos stock from APKMirror link..."
-            curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=14988493&key=001a2bfc5ed9d2c4b6d15e6868481c793fde75c8&forcebaseapk=true"
-          fi
-
-          if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
-            echo "apkmd fetch failed, downloading from fallback archive mirror..."
+            echo "Downloading Google Photos stock APK..."
             curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o stock/gphotos-stock.apk "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos/com.google.android.apps.photos-${GPHOTOS_VER}-arm64-v8a.apk"
           fi
 
           if [ ! -f "stock/gphotos-stock.apk" ] || [ $(stat -c%s stock/gphotos-stock.apk 2>/dev/null || echo 0) -lt 10000000 ]; then
-            echo "Archive mirror failed, downloading stable stock fallback..."
+            echo "Archive mirror failed, downloading stock fallback..."
             curl -s -L -A "Mozilla/5.0" -o stock/gphotos-stock.apk "https://github.com/mentalblank/GPhotos-Revanced/releases/download/39/googlephotos-de-vanced-v7.68.0.884121604-arm64-v8a.apk"
           fi
 
