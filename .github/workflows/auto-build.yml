@@ -367,8 +367,16 @@ jobs:
                 --overwrite
             fi
           done
+
+          # Create fixed-name copies for permanent download links (releases/latest/download/...)
+          cp "$YT_OUTPUT" YouTube-ReVanced-NonRoot.apk
+          cp "$GP_OUTPUT" GooglePhotos-ReVanced-NonRoot.apk
+          GMS_FILE=$(ls GmsCore-*.apk | head -1)
+          if [ -f "$GMS_FILE" ]; then
+            cp "$GMS_FILE" GmsCore.apk
+          fi
           
-          echo "Patched APKs signed and zip-aligned successfully!"
+          echo "Patched APKs signed and zipaligned successfully:"
           ls -lh *.apk
 
       # ──────────────────────────────────────────────────────────
@@ -418,8 +426,11 @@ jobs:
             2. Install **YouTube ReVanced** and/or **Google Photos ReVanced**.
           files: |
             YouTube-ReVanced-NonRoot-*.apk
+            YouTube-ReVanced-NonRoot.apk
             GooglePhotos-ReVanced-NonRoot-*.apk
+            GooglePhotos-ReVanced-NonRoot.apk
             GmsCore-*.apk
+            GmsCore.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 

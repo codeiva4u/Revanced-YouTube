@@ -13,6 +13,18 @@
 This project provides an automated build for **YouTube ReVanced** (Ad-free, Premium features, Android Studio spoof) and **Google Photos ReVanced** (Unlimited Original Quality Backup, Magic Eraser) **without any subscription**.  
 Supports both **ROOT** and **NON-ROOT** versions! 🚀  
 
+## 🔗 Direct Permanent Download Links (हमेशा लेटेस्ट रिलीज़ का लिंक)
+
+इन लिंक्स से डाउनलोड करने पर आपको **हमेशा सबसे नया (Latest) वर्ज़न ही ऑटोमैटिकली मिलेगा**:
+
+| ऐप नाम | परमानेंट डाउनलोड लिंक |
+|---|---|
+| 📺 **YouTube ReVanced (Non-Root)** | 🔗 [Download YouTube-ReVanced-NonRoot.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/YouTube-ReVanced-NonRoot.apk) |
+| 📸 **Google Photos ReVanced** | 🔗 [Download GooglePhotos-ReVanced-NonRoot.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/GooglePhotos-ReVanced-NonRoot.apk) |
+| 🔑 **ReVanced GmsCore** | 🔗 [Download GmsCore.apk](https://github.com/codeiva4u/Revanced-YouTube/releases/latest/download/GmsCore.apk) |
+
+---
+
 ## 📥 Included Packages in Releases
 
 Every release automatically builds and bundles:
