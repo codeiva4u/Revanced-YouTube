@@ -63,27 +63,15 @@ jobs:
           echo "cli_url=$CLI_URL" >> $GITHUB_OUTPUT
           echo "Morphe CLI: $CLI_TAG ($CLI_URL)"
 
-          # Anddea Patches (YouTube) - all releases (includes pre-release)
-          if [ "$INCLUDE_PRE" = "true" ]; then
-            ALL_RELEASES=$(gh api repos/anddea/revanced-patches/releases 2>/dev/null || echo '[]')
-            ANDDEA_RELEASE=$(echo "$ALL_RELEASES" | jq 'if type=="array" and length > 0 then .[0] else {} end')
-          else
-            ANDDEA_RELEASE=$(gh api repos/anddea/revanced-patches/releases/latest 2>/dev/null || echo '{}')
+          # Morphe Official Patches (YouTube)
+          MORPHE_RELEASE=$(gh api repos/MorpheApp/morphe-patches/releases/latest 2>/dev/null || echo '{}')
+          MORPHE_TAG=$(echo "$MORPHE_RELEASE" | jq -r '.tag_name // "v1.37.0"')
+          MORPHE_PRE=$(echo "$MORPHE_RELEASE" | jq -r '.prerelease // false')
+          MORPHE_MPP=$(echo "$MORPHE_RELEASE" | jq -r '.assets[]? | select(.name | endswith(".mpp")) | .browser_download_url // ""')
+          if [ -z "$MORPHE_MPP" ] || [ "$MORPHE_MPP" = "null" ]; then
+            MORPHE_MPP="https://github.com/MorpheApp/morphe-patches/releases/download/${MORPHE_TAG}/patches-${MORPHE_TAG#v}.mpp"
           fi
-
-          ANDDEA_TAG=$(echo "$ANDDEA_RELEASE" | jq -r '.tag_name // ""')
-          if [ -z "$ANDDEA_TAG" ] || [ "$ANDDEA_TAG" = "null" ]; then
-            ANDDEA_RELEASE=$(gh api repos/anddea/revanced-patches/releases/latest 2>/dev/null || echo '{}')
-            ANDDEA_TAG=$(echo "$ANDDEA_RELEASE" | jq -r '.tag_name // "v4.2.0-dev.8"')
-          fi
-
-          ANDDEA_PRE=$(echo "$ANDDEA_RELEASE" | jq -r '.prerelease // false')
-          ANDDEA_MPP=$(echo "$ANDDEA_RELEASE" | jq -r '.assets[]? | select(.name | endswith(".mpp")) | .browser_download_url // ""')
-          if [ -z "$ANDDEA_MPP" ] || [ "$ANDDEA_MPP" = "null" ]; then
-            ANDDEA_MPP="https://github.com/anddea/revanced-patches/releases/download/${ANDDEA_TAG}/patches-${ANDDEA_TAG#v}.mpp"
-          fi
-
-          ANDDEA_BODY=$(echo "$ANDDEA_RELEASE" | jq -r '.body // "Release notes not available"')
+          MORPHE_BODY=$(echo "$MORPHE_RELEASE" | jq -r '.body // "Release notes not available"')
 
           # De-Vanced Patches (Google Photos)
           DEVANCED_RELEASE=$(gh api repos/RookieEnough/De-Vanced/releases/latest 2>/dev/null || echo '{}')
@@ -93,9 +81,9 @@ jobs:
             DEVANCED_MPP="https://github.com/RookieEnough/De-Vanced/releases/download/${DEVANCED_TAG}/patches-${DEVANCED_TAG#v}.mpp"
           fi
 
-          # YouTube version: search all releases for latest "Add support for vX.Y.Z" mention
-          ALL_BODIES=$(gh api repos/anddea/revanced-patches/releases 2>/dev/null | jq -r 'if type=="array" then .[].body // "" else "" end' 2>/dev/null || echo "")
-          YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '(?<=Add support for `v)\d+\.\d+\.\d+' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+          # YouTube version: fetch latest supported version from Morphe release notes
+          ALL_BODIES=$(gh api repos/MorpheApp/morphe-patches/releases 2>/dev/null | jq -r 'if type=="array" then .[].body // "" else "" end' 2>/dev/null || echo "")
+          YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '20\.\d+\.\d+' | head -1)
           if [ -z "$YT_VERSION" ]; then
             YT_VERSION="20.51.39"
           fi
@@ -103,11 +91,11 @@ jobs:
           # Google Photos version
           GPHOTOS_VERSION="7.68.0.884121604"
 
-          echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
-          echo "anddea_prerelease=$ANDDEA_PRE" >> $GITHUB_OUTPUT
-          echo "anddea_mpp_url=$ANDDEA_MPP" >> $GITHUB_OUTPUT
-          echo "anddea_body<<EOF" >> $GITHUB_OUTPUT
-          echo "$ANDDEA_BODY" >> $GITHUB_OUTPUT
+          echo "morphe_tag=$MORPHE_TAG" >> $GITHUB_OUTPUT
+          echo "morphe_prerelease=$MORPHE_PRE" >> $GITHUB_OUTPUT
+          echo "morphe_mpp_url=$MORPHE_MPP" >> $GITHUB_OUTPUT
+          echo "morphe_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$MORPHE_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           echo "yt_version=$YT_VERSION" >> $GITHUB_OUTPUT
 
@@ -127,7 +115,7 @@ jobs:
           echo "gms_tag=$GMS_TAG" >> $GITHUB_OUTPUT
           echo "gms_url=$GMS_URL" >> $GITHUB_OUTPUT
 
-          echo "Anddea Patches (YouTube): $ANDDEA_TAG"
+          echo "Morphe Patches (YouTube): $MORPHE_TAG"
           echo "Target YouTube Version: $YT_VERSION"
           echo "De-Vanced Patches (Google Photos): $DEVANCED_TAG"
           echo "Target Google Photos Version: $GPHOTOS_VERSION"
@@ -140,21 +128,21 @@ jobs:
 
       # ──────────────────────────────────────────────────────────
       # Step 2: Decide whether a new build is needed
-      # Checks updates for BOTH YouTube (Anddea) and Google Photos (De-Vanced)
+      # Checks updates for BOTH YouTube (Morphe) and Google Photos (De-Vanced)
       # ──────────────────────────────────────────────────────────
       - name: Check if Build Required
         id: check-build
         run: |
           FORCE="${{ inputs.force_build }}"
           if [ -z "$FORCE" ]; then FORCE="false"; fi
-          ANDDEA="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          MORPHE="${{ steps.fetch-releases.outputs.morphe_tag }}"
           DEVANCED="${{ steps.fetch-releases.outputs.devanced_tag }}"
-          COMBINED_TAG="${ANDDEA}_${DEVANCED}"
+          COMBINED_TAG="${MORPHE}_${DEVANCED}"
           CURRENT="${{ steps.fetch-releases.outputs.this_repo_tag }}"
 
           EVENT="${{ github.event_name }}"
           echo "Trigger event    : $EVENT"
-          echo "Latest YT Patch  : $ANDDEA"
+          echo "Latest YT Patch  : $MORPHE"
           echo "Latest GP Patch  : $DEVANCED"
           echo "Combined Target  : $COMBINED_TAG"
           echo "Current Repo Build: $CURRENT"
@@ -178,7 +166,7 @@ jobs:
           java-version: '21'
 
       # ──────────────────────────────────────────────────────────
-      # Step 4: Download ReVanced CLI v6, Anddea patches & apkmd
+      # Step 4: Download ReVanced CLI v6, Morphe patches & apkmd
       # ──────────────────────────────────────────────────────────
       - name: Download Build Tools
         if: steps.check-build.outputs.should_build == 'true'
@@ -187,8 +175,8 @@ jobs:
           echo "Downloading Morphe CLI ${{ steps.fetch-releases.outputs.cli_tag }}..."
           wget -q -O build_tools/morphe-cli.jar "${{ steps.fetch-releases.outputs.cli_url }}"
 
-          echo "Downloading Anddea YouTube patches ${{ steps.fetch-releases.outputs.anddea_tag }}..."
-          wget -q -O build_tools/youtube-patches.mpp "${{ steps.fetch-releases.outputs.anddea_mpp_url }}"
+          echo "Downloading Morphe official YouTube patches ${{ steps.fetch-releases.outputs.morphe_tag }}..."
+          wget -q -O build_tools/youtube-patches.mpp "${{ steps.fetch-releases.outputs.morphe_mpp_url }}"
 
           echo "Downloading De-Vanced Google Photos patches ${{ steps.fetch-releases.outputs.devanced_tag }}..."
           wget -q -O build_tools/gphotos-patches.mpp "${{ steps.fetch-releases.outputs.devanced_mpp_url }}"
@@ -276,17 +264,17 @@ jobs:
         if: steps.check-build.outputs.should_build == 'true'
         run: |
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
-          ANDDEA_TAG="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          MORPHE_TAG="${{ steps.fetch-releases.outputs.morphe_tag }}"
           GPHOTOS_VER="${{ steps.fetch-releases.outputs.gphotos_version }}"
           DEVANCED_TAG="${{ steps.fetch-releases.outputs.devanced_tag }}"
 
-          YT_OUTPUT="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
+          YT_OUTPUT="YouTube-ReVanced-NonRoot-${YT_VER}_${MORPHE_TAG}.apk"
           GP_OUTPUT="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_${DEVANCED_TAG}.apk"
 
           rm -f "$YT_OUTPUT" "$GP_OUTPUT"
 
           # 1. Patch YouTube
-          echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
+          echo "Patching YouTube $YT_VER with Morphe Official $MORPHE_TAG ..."
           cat > yt-options.json << EOF
           [
             {
@@ -381,7 +369,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          TAG="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          TAG="${{ steps.fetch-releases.outputs.morphe_tag }}"
           echo "Checking for old assets in release $TAG ..."
           OLD_ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null || echo "")
           for asset in $OLD_ASSETS; do
@@ -395,17 +383,16 @@ jobs:
         if: steps.check-build.outputs.should_build == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.fetch-releases.outputs.anddea_tag }}
-          name: "YouTube & Google Photos ReVanced (${{ steps.fetch-releases.outputs.anddea_tag }})"
-          prerelease: ${{ steps.fetch-releases.outputs.anddea_prerelease }}
+          tag_name: ${{ steps.fetch-releases.outputs.morphe_tag }}
+          name: "YouTube & Google Photos ReVanced (${{ steps.fetch-releases.outputs.morphe_tag }})"
+          prerelease: ${{ steps.fetch-releases.outputs.morphe_prerelease }}
           body: |
             ## Auto Build - YouTube & Google Photos ReVanced (Non-Root)
 
             ### Packages Included:
             1. **YouTube ReVanced** `${{ steps.fetch-releases.outputs.yt_version }}`
                - Package Name: `com.revanced.youtube`
-               - Client Spoofing: `Android Studio`
-               - Patches: Anddea `${{ steps.fetch-releases.outputs.anddea_tag }}`
+               - Patches: Morphe Official `${{ steps.fetch-releases.outputs.morphe_tag }}`
 
             2. **Google Photos ReVanced** `${{ steps.fetch-releases.outputs.gphotos_version }}`
                - Features: Unlimited Original Quality Storage (Pixel XL Spoofing), Magic Eraser & GmsCore Support
@@ -431,14 +418,14 @@ jobs:
       - name: Update update.json & changelog.md
         if: steps.check-build.outputs.should_build == 'true'
         run: |
-          ANDDEA_TAG="${{ steps.fetch-releases.outputs.anddea_tag }}"
+          MORPHE_TAG="${{ steps.fetch-releases.outputs.morphe_tag }}"
           YT_VER="${{ steps.fetch-releases.outputs.yt_version }}"
-          ANDDEA_PRE="${{ steps.fetch-releases.outputs.anddea_prerelease }}"
+          MORPHE_PRE="${{ steps.fetch-releases.outputs.morphe_prerelease }}"
           TODAY=$(date +"%Y-%m-%d")
           VERSION_CODE=$(date +"%Y%m%d")
 
           # Determine release type
-          if [ "$ANDDEA_PRE" = "true" ]; then
+          if [ "$MORPHE_PRE" = "true" ]; then
             RELEASE_TYPE="beta"
           else
             RELEASE_TYPE="stable"
@@ -459,12 +446,12 @@ jobs:
 
           # Update changelog.md
           rm -f changelog.md
-          echo -e "## YouTube ReVanced $YT_VER ($ANDDEA_TAG) ($TODAY)\n\n${{ steps.fetch-releases.outputs.anddea_body }}\n" > changelog.md
+          echo -e "## YouTube ReVanced $YT_VER ($MORPHE_TAG) ($TODAY)\n\n${{ steps.fetch-releases.outputs.morphe_body }}\n" > changelog.md
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add update.json changelog.md
-          git commit -m "Auto-update: YouTube $YT_VER with Anddea $ANDDEA_TAG" || echo "No changes to commit"
+          git commit -m "Auto-update: YouTube $YT_VER with Morphe $MORPHE_TAG" || echo "No changes to commit"
           git push
 
       # ──────────────────────────────────────────────────────────
