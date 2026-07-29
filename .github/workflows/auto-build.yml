@@ -81,11 +81,11 @@ jobs:
             DEVANCED_MPP="https://github.com/RookieEnough/De-Vanced/releases/download/${DEVANCED_TAG}/patches-${DEVANCED_TAG#v}.mpp"
           fi
 
-          # YouTube version: search MorpheApp releases for target version
+          # YouTube version: fetch highest supported version (20.x, 21.x, etc.) from MorpheApp releases
           ALL_BODIES=$(gh api repos/MorpheApp/morphe-patches/releases 2>/dev/null | jq -r 'if type=="array" then .[].body // "" else "" end' 2>/dev/null || echo "")
-          YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '20\.\d+\.\d+' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+          YT_VERSION=$(python3 -c "import sys, json, re; bodies = sys.stdin.read(); versions = sorted(list(set(re.findall(r'\b(?:20|21|22)\.\d+\.\d+\b', bodies))), key=lambda x: [int(i) for i in x.split('.')]); print(versions[-1] if versions else '')" <<< "$ALL_BODIES" 2>/dev/null || echo "")
           if [ -z "$YT_VERSION" ]; then
-            YT_VERSION="20.51.39"
+            YT_VERSION="21.29.366"
           fi
 
           # Google Photos version
