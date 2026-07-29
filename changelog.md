@@ -1,15 +1,16 @@
-## YouTube ReVanced 20.51.39 (v4.2.0-dev.8) (2026-07-28)
+## YouTube ReVanced 20.21.37 (v1.37.0) (2026-07-29)
 
-# [4.2.0-dev.8](https://github.com/anddea/revanced-patches/compare/v4.2.0-dev.7...v4.2.0-dev.8) (2026-07-24)
+## [1.37.0](https://github.com/MorpheApp/morphe-patches/compare/v1.36.0...v1.37.0) (2026-07-26)
 
+### 🐛 Bug Fixes
 
-### Bug Fixes
+* **YouTube - Copy video link:** Use correct timestamp query delimiter when link shortener is disabled ([#2172](https://github.com/MorpheApp/morphe-patches/issues/2172)) ([c3affe2](https://github.com/MorpheApp/morphe-patches/commit/c3affe2bfaf208a267b216d2d40a9ba149a4877e))
+* **YouTube - Playback speed:** Use normal speed for music does not work when default playback speed is Auto ([#2171](https://github.com/MorpheApp/morphe-patches/issues/2171)) ([5c1538a](https://github.com/MorpheApp/morphe-patches/commit/5c1538ad2acbd3275da28b255a2aa7c906a96404))
+* **YouTube - Playback speed:** Playback speed button sometimes does not update ([#2206](https://github.com/MorpheApp/morphe-patches/issues/2206)) ([e2c08fc](https://github.com/MorpheApp/morphe-patches/commit/e2c08fcfed94454f9b28138ac22627693c389287))
+* **YouTube - Remember video quality:** Added new buffering quality flag override ([3585811](https://github.com/MorpheApp/morphe-patches/commit/3585811a3ad2d5448a840d6ca52383c18e5f6800))
 
-* **YouTube & YouTube Music - Return YouTube Username:** Did not work for some versions ([b60e5c8](https://github.com/anddea/revanced-patches/commit/b60e5c86ae3a9972b685d72aac85ce1d3ca629bb))
+### ✨ New Features
 
-
-### Features
-
-* **YouTube & YouTube Music - Spoof video streams:** Default client maintenance ([7aa53cb](https://github.com/anddea/revanced-patches/commit/7aa53cbbdd5139a63647d2e50979b00cfb8bf4e9))
-* **YouTube & YouTube Music:** Add  patch, replace old settings ([7075602](https://github.com/anddea/revanced-patches/commit/70756028d32467a36cbea0bc82a73aff8755e8df))
+* **Spoof video streams:** Default client maintenance ([#2208](https://github.com/MorpheApp/morphe-patches/issues/2208)) ([4e93ec9](https://github.com/MorpheApp/morphe-patches/commit/4e93ec983847ef4ab76fcfd9e52875e418fc205d))
+* **YouTube - Seekbar:** Add Enable seekbar thumbnails setting ([#2182](https://github.com/MorpheApp/morphe-patches/issues/2182)) ([32575ea](https://github.com/MorpheApp/morphe-patches/commit/32575ea9bcd6ff7b135a598799c969c15b4bfadd))
 
