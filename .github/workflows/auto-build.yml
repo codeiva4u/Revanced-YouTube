@@ -404,7 +404,7 @@ jobs:
         with:
           tag_name: ${{ steps.fetch-releases.outputs.anddea_tag }}
           name: "YouTube & Google Photos ReVanced (${{ steps.fetch-releases.outputs.anddea_tag }})"
-          prerelease: ${{ steps.fetch-releases.outputs.anddea_prerelease }}
+          prerelease: false
           make_latest: true
           body: |
             ## Auto Build - YouTube & Google Photos ReVanced (Non-Root)
