@@ -93,6 +93,14 @@ jobs:
             DEVANCED_MPP="https://github.com/RookieEnough/De-Vanced/releases/download/${DEVANCED_TAG}/patches-${DEVANCED_TAG#v}.mpp"
           fi
 
+          # Piko Patches (Twitter/X & Instagram)
+          PIKO_RELEASE=$(gh api repos/crimera/piko/releases/latest 2>/dev/null || echo '{}')
+          PIKO_TAG=$(echo "$PIKO_RELEASE" | jq -r '.tag_name // "v3.8.0"')
+          PIKO_MPP=$(echo "$PIKO_RELEASE" | jq -r '.assets[]? | select(.name | endswith(".mpp")) | .browser_download_url // ""')
+          if [ -z "$PIKO_MPP" ] || [ "$PIKO_MPP" = "null" ]; then
+            PIKO_MPP="https://github.com/crimera/piko/releases/download/${PIKO_TAG}/patches-${PIKO_TAG#v}.mpp"
+          fi
+
           # YouTube version: search all releases for latest "Add support for vX.Y.Z" mention
           ALL_BODIES=$(gh api repos/anddea/revanced-patches/releases 2>/dev/null | jq -r 'if type=="array" then .[].body // "" else "" end' 2>/dev/null || echo "")
           YT_VERSION=$(echo "$ALL_BODIES" | grep -oP '(?<=Add support for `v)\d+\.\d+\.\d+' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
@@ -102,6 +110,10 @@ jobs:
 
           # Google Photos version: fetch latest version string via custom script
           GPHOTOS_VERSION=$(python scripts/fetch_gphotos.py version 2>/dev/null || echo "7.85.0.952162352")
+
+          # Twitter/X & Instagram versions via custom script
+          TWITTER_VERSION=$(python scripts/fetch_social.py twitter_version 2>/dev/null || echo "12.7.1-release.0")
+          INSTAGRAM_VERSION=$(python scripts/fetch_social.py instagram_version 2>/dev/null || echo "435.0.0.37.76")
 
           echo "anddea_tag=$ANDDEA_TAG" >> $GITHUB_OUTPUT
           echo "anddea_prerelease=$ANDDEA_PRE" >> $GITHUB_OUTPUT
@@ -114,6 +126,11 @@ jobs:
           echo "devanced_tag=$DEVANCED_TAG" >> $GITHUB_OUTPUT
           echo "devanced_mpp_url=$DEVANCED_MPP" >> $GITHUB_OUTPUT
           echo "gphotos_version=$GPHOTOS_VERSION" >> $GITHUB_OUTPUT
+
+          echo "piko_tag=$PIKO_TAG" >> $GITHUB_OUTPUT
+          echo "piko_mpp_url=$PIKO_MPP" >> $GITHUB_OUTPUT
+          echo "twitter_version=$TWITTER_VERSION" >> $GITHUB_OUTPUT
+          echo "instagram_version=$INSTAGRAM_VERSION" >> $GITHUB_OUTPUT
 
           # Official ReVanced GmsCore (Play Protect Verified - No Warnings)
           GMS_RELEASE=$(gh api repos/ReVanced/GmsCore/releases/latest 2>/dev/null || echo '{}')
@@ -131,6 +148,9 @@ jobs:
           echo "Target YouTube Version: $YT_VERSION"
           echo "De-Vanced Patches (Google Photos): $DEVANCED_TAG"
           echo "Target Google Photos Version: $GPHOTOS_VERSION"
+          echo "Piko Patches (Twitter & Instagram): $PIKO_TAG"
+          echo "Target Twitter Version: $TWITTER_VERSION"
+          echo "Target Instagram Version: $INSTAGRAM_VERSION"
           echo "ReVanced GmsCore: $GMS_TAG ($GMS_URL)"
 
           # This repo's latest release tag
@@ -187,6 +207,9 @@ jobs:
 
           echo "Downloading De-Vanced Google Photos patches ${{ steps.fetch-releases.outputs.devanced_tag }}..."
           wget -q -O build_tools/gphotos-patches.mpp "${{ steps.fetch-releases.outputs.devanced_mpp_url }}"
+
+          echo "Downloading Piko Twitter/Instagram patches ${{ steps.fetch-releases.outputs.piko_tag }}..."
+          wget -q -O build_tools/piko-patches.mpp "${{ steps.fetch-releases.outputs.piko_mpp_url }}"
 
           echo "Downloading uber-apk-signer..."
           wget -q -O build_tools/uber-apk-signer.jar \
@@ -266,6 +289,12 @@ jobs:
             exit 1
           fi
 
+          echo "3. Downloading Twitter stock APK..."
+          python scripts/fetch_social.py download_twitter || true
+
+          echo "4. Downloading Instagram stock APK..."
+          python scripts/fetch_social.py download_instagram || true
+
           echo "Downloaded stock APKs successfully:"
           ls -lh stock/
 
@@ -279,11 +308,16 @@ jobs:
           ANDDEA_TAG="${{ steps.fetch-releases.outputs.anddea_tag }}"
           GPHOTOS_VER="${{ steps.fetch-releases.outputs.gphotos_version }}"
           DEVANCED_TAG="${{ steps.fetch-releases.outputs.devanced_tag }}"
+          TWITTER_VER="${{ steps.fetch-releases.outputs.twitter_version }}"
+          INSTAGRAM_VER="${{ steps.fetch-releases.outputs.instagram_version }}"
+          PIKO_TAG="${{ steps.fetch-releases.outputs.piko_tag }}"
 
           YT_OUTPUT="YouTube-ReVanced-NonRoot-${YT_VER}_${ANDDEA_TAG}.apk"
           GP_OUTPUT="GooglePhotos-ReVanced-NonRoot-${GPHOTOS_VER}_${DEVANCED_TAG}.apk"
+          TWITTER_OUTPUT="Twitter-Piko-NonRoot-${TWITTER_VER}_${PIKO_TAG}.apk"
+          INSTAGRAM_OUTPUT="Instagram-Piko-NonRoot-${INSTAGRAM_VER}_${PIKO_TAG}.apk"
 
-          rm -f "$YT_OUTPUT" "$GP_OUTPUT"
+          rm -f "$YT_OUTPUT" "$GP_OUTPUT" "$TWITTER_OUTPUT" "$INSTAGRAM_OUTPUT"
 
           # 1. Patch YouTube
           echo "Patching YouTube $YT_VER with Anddea $ANDDEA_TAG ..."
@@ -353,6 +387,29 @@ jobs:
             -o "$GP_OUTPUT" \
             stock/gphotos-stock.apk
 
+          # 3. Patch Twitter (X)
+          if [ -f "stock/twitter-stock.apk" ]; then
+            echo "Patching Twitter (X) $TWITTER_VER with Piko $PIKO_TAG ..."
+            java -jar build_tools/morphe-cli.jar patch \
+              -p build_tools/piko-patches.mpp \
+              -e "Bring back twitter" \
+              -e "Clear tracking params" \
+              -o "$TWITTER_OUTPUT" \
+              stock/twitter-stock.apk || echo "Twitter patch failed or skipped"
+          fi
+
+          # 4. Patch Instagram
+          if [ -f "stock/instagram-stock.apk" ]; then
+            echo "Patching Instagram $INSTAGRAM_VER with Piko $PIKO_TAG ..."
+            java -jar build_tools/morphe-cli.jar patch \
+              -p build_tools/piko-patches.mpp \
+              -e "Disable ads" \
+              -e "Disable analytics" \
+              -e "Copy comment" \
+              -o "$INSTAGRAM_OUTPUT" \
+              stock/instagram-stock.apk || echo "Instagram patch failed or skipped"
+          fi
+
           echo "Verifying patched APKs..."
           ls -lh *.apk
           echo "yt_output=$YT_OUTPUT" >> $GITHUB_OUTPUT
@@ -366,8 +423,8 @@ jobs:
       - name: Sign APKs
         if: steps.check-build.outputs.should_build == 'true'
         run: |
-          echo "Signing YouTube and Google Photos APKs..."
-          for apk in YouTube-ReVanced-*.apk GooglePhotos-ReVanced-*.apk; do
+          echo "Signing YouTube, Google Photos, Twitter, and Instagram APKs..."
+          for apk in YouTube-ReVanced-*.apk GooglePhotos-ReVanced-*.apk Twitter-Piko-*.apk Instagram-Piko-*.apk; do
             if [ -f "$apk" ]; then
               echo "Signing $apk ..."
               java -jar build_tools/uber-apk-signer.jar \
@@ -380,10 +437,14 @@ jobs:
           # Create fixed-name copies for permanent download links (releases/latest/download/...)
           YT_FILE=$(ls YouTube-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'YouTube-ReVanced-NonRoot.apk$' | head -1)
           GP_FILE=$(ls GooglePhotos-ReVanced-NonRoot-*.apk 2>/dev/null | grep -v 'GooglePhotos-ReVanced-NonRoot.apk$' | head -1)
+          TW_FILE=$(ls Twitter-Piko-NonRoot-*.apk 2>/dev/null | grep -v 'Twitter-Piko-NonRoot.apk$' | head -1)
+          IG_FILE=$(ls Instagram-Piko-NonRoot-*.apk 2>/dev/null | grep -v 'Instagram-Piko-NonRoot.apk$' | head -1)
           GMS_FILE=$(ls GmsCore-*.apk 2>/dev/null | grep -v 'GmsCore.apk$' | head -1)
 
           if [ -n "$YT_FILE" ] && [ -f "$YT_FILE" ]; then cp "$YT_FILE" YouTube-ReVanced-NonRoot.apk; fi
           if [ -n "$GP_FILE" ] && [ -f "$GP_FILE" ]; then cp "$GP_FILE" GooglePhotos-ReVanced-NonRoot.apk; fi
+          if [ -n "$TW_FILE" ] && [ -f "$TW_FILE" ]; then cp "$TW_FILE" Twitter-Piko-NonRoot.apk; fi
+          if [ -n "$IG_FILE" ] && [ -f "$IG_FILE" ]; then cp "$IG_FILE" Instagram-Piko-NonRoot.apk; fi
           if [ -n "$GMS_FILE" ] && [ -f "$GMS_FILE" ]; then cp "$GMS_FILE" GmsCore.apk; fi
           
           echo "Patched APKs signed and zipaligned successfully:"
@@ -440,6 +501,10 @@ jobs:
             YouTube-ReVanced-NonRoot.apk
             GooglePhotos-ReVanced-NonRoot-*.apk
             GooglePhotos-ReVanced-NonRoot.apk
+            Twitter-Piko-NonRoot-*.apk
+            Twitter-Piko-NonRoot.apk
+            Instagram-Piko-NonRoot-*.apk
+            Instagram-Piko-NonRoot.apk
             GmsCore-*.apk
             GmsCore.apk
         env:
