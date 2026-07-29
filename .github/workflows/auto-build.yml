@@ -294,7 +294,10 @@ jobs:
                   }
                 },
                 "Spoof video streams": {
-                  "enabled": true
+                  "enabled": true,
+                  "options": {
+                    "defaultClient": "ANDROID_STUDIO"
+                  }
                 }
               }
             }
