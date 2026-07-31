@@ -1,15 +1,11 @@
-## YouTube ReVanced 20.51.39 (v4.2.0-dev.8) (2026-07-29)
+## YouTube ReVanced 20.51.39 (v4.2.0-dev.9) (2026-07-31)
 
-# [4.2.0-dev.8](https://github.com/anddea/revanced-patches/compare/v4.2.0-dev.7...v4.2.0-dev.8) (2026-07-24)
-
-
-### Bug Fixes
-
-* **YouTube & YouTube Music - Return YouTube Username:** Did not work for some versions ([b60e5c8](https://github.com/anddea/revanced-patches/commit/b60e5c86ae3a9972b685d72aac85ce1d3ca629bb))
+# [4.2.0-dev.9](https://github.com/anddea/revanced-patches/compare/v4.2.0-dev.8...v4.2.0-dev.9) (2026-07-31)
 
 
 ### Features
 
-* **YouTube & YouTube Music - Spoof video streams:** Default client maintenance ([7aa53cb](https://github.com/anddea/revanced-patches/commit/7aa53cbbdd5139a63647d2e50979b00cfb8bf4e9))
-* **YouTube & YouTube Music:** Add  patch, replace old settings ([7075602](https://github.com/anddea/revanced-patches/commit/70756028d32467a36cbea0bc82a73aff8755e8df))
+* **YouTube - Seekbar components:** Add Enable seekbar thumbnails setting ([75d8969](https://github.com/anddea/revanced-patches/commit/75d8969cec5338521bc7a05dee9a8078282d6ce7))
+* **YouTube - Wide search bar:** Add support for newer versions ([426f2f4](https://github.com/anddea/revanced-patches/commit/426f2f499a1723a8d7cca12dc1e8445c99b7b098))
+* **YouTube Music - Flyout menu components:** Add bold  &  icons ([#1648](https://github.com/anddea/revanced-patches/issues/1648)) ([519f86a](https://github.com/anddea/revanced-patches/commit/519f86ac741f0a77ffc99bca16f4941c7d4daff3))
 
